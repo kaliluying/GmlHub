@@ -137,17 +137,63 @@
       </div>
     </div>
     
-    <!-- 桌面图标区域 -->
-    <div
-      class="desktop-icons relative z-20 pt-14 md:pt-16 px-3 pb-28 md:pb-32 md:px-8 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 sm:gap-3 md:gap-4 content-start max-w-6xl"
-      :class="desktopIconGridClass"
-    >
-      <AppIcon
-        v-for="app in store.apps"
-        :key="app.id"
-        :app="app"
-        :icon-size="store.settings.iconSize"
-      />
+    <div class="desktop-workspace relative z-20 pt-14 md:pt-16 px-3 pb-28 md:pb-32 md:px-8">
+      <div class="desktop-main-grid">
+        <div
+          class="desktop-icons grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 sm:gap-3 md:gap-4 content-start"
+          :class="desktopIconGridClass"
+        >
+          <AppIcon
+            v-for="app in store.apps"
+            :key="app.id"
+            :app="app"
+            :icon-size="store.settings.iconSize"
+          />
+        </div>
+
+        <aside class="desktop-side-panel hidden xl:grid gap-3 content-start">
+          <section class="widget-card">
+            <h3 class="widget-title">系统概览</h3>
+            <div class="widget-metric-row">
+              <span>可用率</span>
+              <strong>{{ availabilityRate }}%</strong>
+            </div>
+            <div class="widget-metric-row">
+              <span>在线</span>
+              <strong class="text-emerald-300">{{ store.serviceSummary.online }}</strong>
+            </div>
+            <div class="widget-metric-row">
+              <span>离线</span>
+              <strong class="text-rose-300">{{ store.serviceSummary.offline }}</strong>
+            </div>
+            <div class="widget-sub mt-2">最近检测: {{ lastCheckLabel }}</div>
+          </section>
+
+          <section class="widget-card">
+            <h3 class="widget-title">快捷访问</h3>
+            <button
+              v-for="app in panelQuickApps"
+              :key="`quick-${app.id}`"
+              class="widget-link"
+              @click="openWidgetApp(app.id)"
+            >
+              <span class="widget-link-left">
+                <span class="text-base">{{ app.icon }}</span>
+                <span>{{ app.name }}</span>
+              </span>
+              <span class="widget-link-domain">{{ app.domain }}</span>
+            </button>
+          </section>
+
+          <section class="widget-card">
+            <h3 class="widget-title">桌面状态</h3>
+            <div class="widget-metric-row"><span>当前风格</span><strong>{{ activePresetLabel }}</strong></div>
+            <div class="widget-metric-row"><span>动效强度</span><strong>{{ motionLevelLabel }}</strong></div>
+            <div class="widget-metric-row"><span>代码雨</span><strong>{{ store.settings.codeRainEnabled ? '开启' : '关闭' }}</strong></div>
+            <div class="widget-sub mt-2">时钟 {{ currentTime }}</div>
+          </section>
+        </aside>
+      </div>
     </div>
     
     <!-- 窗口层 -->
@@ -321,6 +367,51 @@ const desktopIconGridClass = computed(() => {
   return ''
 })
 
+const panelQuickApps = computed(() => {
+  const preferred = ['github', 'bilibili', 'blog', 'tools', 'wiki', 'vault']
+  const preferredApps = preferred
+    .map(id => store.apps.find(app => app.id === id))
+    .filter(Boolean)
+
+  if (preferredApps.length >= 5) {
+    return preferredApps.slice(0, 5)
+  }
+
+  const fallback = store.apps.filter(app => app.url && app.id !== 'terminal' && app.id !== 'settings')
+  return fallback.slice(0, 5)
+})
+
+const availabilityRate = computed(() => {
+  const { total, online } = store.serviceSummary
+  if (!total) return 0
+  return Math.round((online / total) * 100)
+})
+
+const lastCheckLabel = computed(() => {
+  if (!store.lastStatusCheckAt) return '--:--:--'
+  return new Date(store.lastStatusCheckAt).toLocaleTimeString('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  })
+})
+
+const activePresetLabel = computed(() => {
+  const names = {
+    'deep-net': '深网',
+    'neon-core': '霓虹',
+    'quantum-green': '量子',
+    'signal-amber': '信号',
+  }
+  return names[activePreset.value.id] || activePreset.value.id
+})
+
+const motionLevelLabel = computed(() => {
+  const names = { low: '低', medium: '中', high: '高' }
+  return names[store.settings.motionLevel] || '中'
+})
+
 let timeInterval = null
 
 const updateTime = () => {
@@ -492,6 +583,10 @@ const openFromLauncher = (appId) => {
   closeLauncher()
 }
 
+const openWidgetApp = (appId) => {
+  store.openWindow(appId)
+}
+
 const launchSelected = () => {
   const selected = launcherApps.value[launcher.value.selectedIndex]
   if (!selected) return
@@ -522,9 +617,16 @@ const hideContextMenu = () => {
   contextMenu.value.show = false
 }
 
-const refreshDesktop = () => {
+const refreshDesktop = async () => {
   hideContextMenu()
-  // 刷新逻辑
+
+  launcher.value.query = ''
+  launcher.value.selectedIndex = 0
+  closeLauncher()
+
+  pointer.value.active = false
+
+  await store.checkServiceStatuses()
 }
 
 const changeWallpaper = () => {
@@ -538,6 +640,94 @@ const changeWallpaper = () => {
 <style scoped>
 .desktop {
   user-select: none;
+}
+
+.desktop-main-grid {
+  display: grid;
+  gap: 14px;
+}
+
+@media (min-width: 1280px) {
+  .desktop-main-grid {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    align-items: start;
+  }
+}
+
+.desktop-side-panel {
+  position: sticky;
+  top: 56px;
+}
+
+.widget-card {
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  background: linear-gradient(180deg, rgba(6, 20, 40, 0.58) 0%, rgba(5, 16, 29, 0.68) 100%);
+  backdrop-filter: blur(14px);
+  padding: 12px;
+  color: rgb(226 232 240);
+}
+
+.widget-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
+
+.widget-metric-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: rgb(203 213 225);
+  padding: 4px 0;
+}
+
+.widget-sub {
+  font-size: 11px;
+  color: rgb(148 163 184);
+}
+
+.widget-link {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(15, 23, 42, 0.34);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  text-align: left;
+  font-size: 12px;
+  color: rgb(226 232 240);
+}
+
+.widget-link:last-child {
+  margin-bottom: 0;
+}
+
+.widget-link:hover {
+  border-color: rgba(56, 189, 248, 0.52);
+  background: rgba(14, 116, 144, 0.28);
+}
+
+.widget-link-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.widget-link-domain {
+  max-width: 118px;
+  font-size: 10px;
+  color: rgb(148 163 184);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tech-grid-layer {
