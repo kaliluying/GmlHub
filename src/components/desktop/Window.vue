@@ -2,7 +2,7 @@
   <div
     v-if="!window.minimized"
     class="window absolute flex flex-col rounded-2xl overflow-hidden window-shadow transition-shadow"
-    :class="{ 'ring-2 ring-sky-300/60 dark:ring-sky-400/40': window.focused }"
+    :class="{ 'ring-2 ring-sky-300/60 dark:ring-sky-400/40': window.focused, 'window-mobile-panel': isMobilePanel }"
     :style="windowStyle"
     @mousedown="handleMouseDown"
   >
@@ -57,7 +57,7 @@
     
     <!-- 调整大小手柄 -->
     <div
-      v-if="!window.maximized"
+      v-if="!window.maximized && !isMobilePanel"
       class="resize-handle absolute bottom-0 right-0 w-4 h-4 cursor-se-resize"
       @mousedown="startResize"
     />
@@ -83,6 +83,11 @@ const isDragging = ref(false)
 const isResizing = ref(false)
 const dragOffset = ref({ x: 0, y: 0 })
 const resizeStart = ref({ x: 0, y: 0, width: 0, height: 0 })
+
+const isMobilePanel = computed(() => {
+  if (typeof window === 'undefined') return false
+  return window.innerWidth < 768 && (props.window.appId === 'terminal' || props.window.appId === 'settings')
+})
 
 const windowStyle = computed(() => ({
   left: `${props.window.x}px`,
@@ -166,6 +171,11 @@ const close = () => {
   min-width: 400px;
   min-height: 300px;
   border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.window-mobile-panel {
+  min-width: 320px;
+  min-height: 320px;
 }
 
 .dark .window {

@@ -456,6 +456,35 @@ export const useDesktopStore = defineStore('desktop', () => {
   }
 
   // 方法
+  const isCompactMobileViewport = () => {
+    if (typeof window === 'undefined') return false
+    return window.innerWidth < 768
+  }
+
+  const buildWindowFrame = (appId, index) => {
+    if (typeof window !== 'undefined' && isCompactMobileViewport() && (appId === 'terminal' || appId === 'settings')) {
+      const horizontalPadding = 8
+      const topOffset = 48
+      const bottomOffset = 88
+      const availableWidth = Math.max(240, window.innerWidth - horizontalPadding * 2)
+      const availableHeight = Math.max(260, window.innerHeight - topOffset - bottomOffset)
+
+      return {
+        x: horizontalPadding,
+        y: topOffset,
+        width: availableWidth,
+        height: availableHeight,
+      }
+    }
+
+    return {
+      x: 100 + (index * 30),
+      y: 100 + (index * 30),
+      width: 900,
+      height: 600,
+    }
+  }
+
   const openWindow = (appId) => {
     const app = apps.value.find(a => a.id === appId)
     if (!app) return
@@ -477,16 +506,17 @@ export const useDesktopStore = defineStore('desktop', () => {
       return
     }
 
+    const frame = buildWindowFrame(appId, windows.value.length)
     const newWindow = {
       id: `window-${Date.now()}`,
       appId: app.id,
       title: app.name,
       icon: app.icon,
       url: app.url,
-      x: 100 + (windows.value.length * 30),
-      y: 100 + (windows.value.length * 30),
-      width: 900,
-      height: 600,
+      x: frame.x,
+      y: frame.y,
+      width: frame.width,
+      height: frame.height,
       zIndex: ++maxZIndex.value,
       minimized: false,
       maximized: false,

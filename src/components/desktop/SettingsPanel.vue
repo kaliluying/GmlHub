@@ -37,7 +37,7 @@
       </section>
 
       <section class="settings-card lg:col-span-6">
-        <div class="flex items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 class="text-lg font-semibold">外观</h2>
             <p class="text-xs text-slate-500 dark:text-slate-300">主题、图标和 Dock 显示</p>
@@ -337,6 +337,33 @@ const usage = computed(() => {
   display: grid;
   gap: 14px;
   padding: 14px;
+}
+
+@media (max-width: 767px) {
+  .settings-shell {
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .settings-card {
+    border-radius: 14px;
+    padding: 12px;
+  }
+
+  .settings-card .inline-flex {
+    display: flex;
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .segment-btn {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .wallpaper-chip {
+    height: 58px;
+  }
 }
 
 @media (min-width: 1024px) {

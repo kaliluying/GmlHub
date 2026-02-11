@@ -1376,4 +1376,31 @@ onUnmounted(() => {
   color: rgb(226 232 240);
   border-top: 1px solid rgba(148, 163, 184, 0.24);
 }
+
+@media (max-width: 767px) {
+  .terminal-root {
+    padding: 10px;
+    font-size: 12px;
+  }
+
+  .font-small {
+    font-size: 11px;
+  }
+
+  .font-medium {
+    font-size: 12px;
+  }
+
+  .font-large {
+    font-size: 14px;
+  }
+
+  .terminal-input-row {
+    gap: 6px;
+  }
+
+  .terminal-prefix {
+    font-size: 11px;
+  }
+}
 </style>
