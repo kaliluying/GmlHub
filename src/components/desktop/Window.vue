@@ -37,7 +37,7 @@
     
     <!-- 窗口内容 -->
     <div class="flex-1 bg-white/86 dark:bg-slate-950/76 backdrop-blur-md overflow-hidden relative">
-      <TerminalPanel v-if="window.appId === 'terminal'" />
+      <TerminalPanel v-if="window.appId === 'terminal'" :window-id="window.id" />
       <SettingsPanel v-else-if="window.appId === 'settings'" />
       <TrashPanel v-else-if="window.appId === 'trash'" />
       <iframe

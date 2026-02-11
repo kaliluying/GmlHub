@@ -32,6 +32,13 @@ import { useVirtualFsStore } from '../../stores/virtualFs.js'
 const store = useDesktopStore()
 const fsStore = useVirtualFsStore()
 
+const props = defineProps({
+  windowId: {
+    type: String,
+    default: '',
+  },
+})
+
 const lines = ref([
   { kind: 'info', text: 'GML Portal Terminal v0.1' },
   { kind: 'info', text: '输入 help 查看可用命令（模拟数据模式）' },
@@ -54,7 +61,7 @@ const baseCommands = [
   'help', 'open', 'status', 'theme', 'clear',
   'pwd', 'ls', 'cd', 'cat', 'whoami', 'uname',
   'date', 'uptime', 'ip', 'ifconfig', 'ping',
-  'curl', 'ps', 'df', 'free', 'history', 'echo', 'head', 'tail', 'grep', 'wc', 'mkdir', 'touch', 'rm',
+  'curl', 'ps', 'df', 'free', 'history', 'echo', 'head', 'tail', 'grep', 'wc', 'mkdir', 'touch', 'rm', 'exit',
 ]
 const commandAliases = {
   ll: 'ls',
@@ -382,8 +389,18 @@ const handleHelp = async () => {
   await pushLine('info', 'touch <file>          创建空文件（会话内）')
   await pushLine('info', 'rm [-rf] <path>       删除文件/目录（会话内）')
   await pushLine('info', 'history / echo        历史与输出')
+  await pushLine('info', 'exit                  关闭当前终端窗口')
   await pushLine('info', 'theme [cyber|clean]   切换终端主题')
   await pushLine('info', 'clear                 清空终端输出')
+}
+
+const handleExit = async () => {
+  if (!props.windowId) {
+    await pushLine('error', 'exit: current terminal window not found')
+    return
+  }
+
+  store.closeWindow(props.windowId)
 }
 
 const handleOpen = async (target) => {
@@ -1181,6 +1198,11 @@ const executeCommand = async (rawInput) => {
 
   if (commandName === 'sudo') {
     await handleSudo(rawTarget)
+    return
+  }
+
+  if (commandName === 'exit') {
+    await handleExit()
     return
   }
 
