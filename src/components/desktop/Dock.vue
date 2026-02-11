@@ -8,7 +8,7 @@
       @mouseleave="handleDockMouseLeave"
     >
       <div
-        v-for="(app, index) in store.apps"
+        v-for="(app, index) in store.desktopApps"
         :key="app.id"
         class="dock-item relative group"
         :ref="el => setIconRef(el, index)"
@@ -45,6 +45,13 @@
         <div class="tooltip absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1 rounded-lg bg-gray-900/85 text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
           废纸篓
         </div>
+
+        <div
+          v-if="store.trashCount > 0"
+          class="absolute -top-2 -right-2 min-w-4 h-4 px-1 rounded-full bg-rose-500 text-white text-[10px] leading-4 text-center font-semibold"
+        >
+          {{ store.trashCount }}
+        </div>
       </div>
     </div>
   </div>
@@ -60,7 +67,7 @@ const mouseX = ref(null)
 const iconRefs = ref([])
 const supportsHover = typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches
 
-const trashIndex = computed(() => store.apps.length)
+const trashIndex = computed(() => store.desktopApps.length)
 
 const dockAnimationProfiles = {
   low: { maxDistance: 120, boardLift: 3.5, shellScale: 0.16, shellLift: 7, iconScale: 0.12, iconLift: 0.9 },
@@ -123,7 +130,7 @@ const dockBoardStyle = computed(() => {
     }
   }
 
-  const total = store.apps.length + 1
+  const total = store.desktopApps.length + 1
   let maxInfluence = 0
 
   for (let index = 0; index < total; index += 1) {
@@ -197,7 +204,7 @@ const handleAppClick = (appId) => {
 }
 
 const showTrash = () => {
-  alert('废纸篓功能开发中...')
+  store.openTrashWindow()
 }
 </script>
 

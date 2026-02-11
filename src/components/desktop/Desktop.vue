@@ -144,7 +144,7 @@
           :class="desktopIconGridClass"
         >
           <AppIcon
-            v-for="app in store.apps"
+            v-for="app in store.desktopApps"
             :key="app.id"
             :app="app"
             :icon-size="store.settings.iconSize"
@@ -236,6 +236,8 @@ const contextMenu = ref({ show: false, x: 0, y: 0 })
 const pointer = ref({ x: 50, y: 50, active: false })
 const launcherInput = ref(null)
 const launcher = ref({ open: false, query: '', selectedIndex: 0 })
+const DESKTOP_MENU_EVENT = 'desktop:context-menu-open'
+const ICON_MENU_EVENT = 'desktop:icon-context-menu-open'
 
 const wallpaperPresets = [
   {
@@ -331,9 +333,9 @@ const motionProfile = computed(() => motionProfiles[store.settings.motionLevel] 
 
 const filteredApps = computed(() => {
   const query = launcher.value.query.trim().toLowerCase()
-  if (!query) return store.apps
+  if (!query) return store.desktopApps
 
-  return store.apps.filter(app => {
+  return store.desktopApps.filter(app => {
     const name = app.name.toLowerCase()
     const desc = app.description?.toLowerCase() || ''
     const domain = app.domain?.toLowerCase() || ''
@@ -357,7 +359,7 @@ const launcherApps = computed(() => {
 
   const pinned = store.pinnedApps
   const recent = store.recentApps.filter(app => !pinnedSet.has(app.id))
-  const others = store.apps.filter(app => !pinnedSet.has(app.id) && !recentSet.has(app.id))
+  const others = store.desktopApps.filter(app => !pinnedSet.has(app.id) && !recentSet.has(app.id))
   return [...pinned, ...recent, ...others]
 })
 
@@ -370,14 +372,14 @@ const desktopIconGridClass = computed(() => {
 const panelQuickApps = computed(() => {
   const preferred = ['github', 'bilibili', 'blog', 'tools', 'wiki', 'vault']
   const preferredApps = preferred
-    .map(id => store.apps.find(app => app.id === id))
+    .map(id => store.desktopApps.find(app => app.id === id))
     .filter(Boolean)
 
   if (preferredApps.length >= 5) {
     return preferredApps.slice(0, 5)
   }
 
-  const fallback = store.apps.filter(app => app.url && app.id !== 'terminal' && app.id !== 'settings')
+  const fallback = store.desktopApps.filter(app => app.url && app.id !== 'terminal' && app.id !== 'settings')
   return fallback.slice(0, 5)
 })
 
@@ -435,6 +437,7 @@ onMounted(() => {
   timeInterval = setInterval(updateTime, 1000)
   document.addEventListener('click', hideContextMenu)
   window.addEventListener('keydown', handleGlobalKeydown)
+  window.addEventListener(ICON_MENU_EVENT, hideContextMenu)
 })
 
 watch(
@@ -456,6 +459,7 @@ onUnmounted(() => {
   store.stopStatusMonitoring()
   document.removeEventListener('click', hideContextMenu)
   window.removeEventListener('keydown', handleGlobalKeydown)
+  window.removeEventListener(ICON_MENU_EVENT, hideContextMenu)
 })
 
 watch(
@@ -606,6 +610,7 @@ const statusText = (status) => {
 }
 
 const showContextMenu = (e) => {
+  window.dispatchEvent(new CustomEvent(DESKTOP_MENU_EVENT))
   contextMenu.value = {
     show: true,
     x: e.clientX,

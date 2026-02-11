@@ -5,6 +5,8 @@ export const useDesktopStore = defineStore('desktop', () => {
   const PINNED_APPS_STORAGE_KEY = 'desktop.pinnedApps'
   const RECENT_APPS_STORAGE_KEY = 'desktop.recentApps'
   const SETTINGS_STORAGE_KEY = 'desktop.settings'
+  const TRASHED_APPS_STORAGE_KEY = 'desktop.trashedApps'
+  const REMOVED_APPS_STORAGE_KEY = 'desktop.removedApps'
 
   // 应用配置
   const apps = ref([
@@ -104,6 +106,8 @@ export const useDesktopStore = defineStore('desktop', () => {
   const maxZIndex = ref(100)
   const pinnedAppIds = ref([])
   const recentAppIds = ref([])
+  const trashedAppIds = ref([])
+  const removedAppIds = ref([])
   const isMonitoringStatus = ref(false)
   const lastStatusCheckAt = ref(null)
 
@@ -116,11 +120,11 @@ export const useDesktopStore = defineStore('desktop', () => {
     wallpaperColor: '#1a1a2e',
     showDock: true,
     dockPosition: 'bottom',
-    iconSize: 'medium', // small, medium, large
+    iconSize: 'medium',
     motionLevel: 'medium',
     codeRainEnabled: true,
     dockAnimationLevel: 'medium',
-    terminalFontSize: 'medium', // small, medium, large
+    terminalFontSize: 'medium',
     terminalHistoryLimit: 100,
     terminalEasterEggsEnabled: true,
     autoStartMonitoring: true,
@@ -144,13 +148,29 @@ export const useDesktopStore = defineStore('desktop', () => {
 
   const pinnedApps = computed(() => {
     const appMap = new Map(apps.value.map(app => [app.id, app]))
-    return pinnedAppIds.value.map(id => appMap.get(id)).filter(Boolean)
+    return pinnedAppIds.value
+      .map(id => appMap.get(id))
+      .filter(Boolean)
+      .filter(app => !trashedAppIds.value.includes(app.id) && !removedAppIds.value.includes(app.id))
   })
 
   const recentApps = computed(() => {
     const appMap = new Map(apps.value.map(app => [app.id, app]))
-    return recentAppIds.value.map(id => appMap.get(id)).filter(Boolean)
+    return recentAppIds.value
+      .map(id => appMap.get(id))
+      .filter(Boolean)
+      .filter(app => !trashedAppIds.value.includes(app.id) && !removedAppIds.value.includes(app.id))
   })
+
+  const desktopApps = computed(() => {
+    return apps.value.filter(app => !trashedAppIds.value.includes(app.id) && !removedAppIds.value.includes(app.id))
+  })
+
+  const trashedApps = computed(() => {
+    return apps.value.filter(app => trashedAppIds.value.includes(app.id))
+  })
+
+  const trashCount = computed(() => trashedAppIds.value.length)
 
   const readStorageList = (key) => {
     if (typeof window === 'undefined') return []
@@ -185,7 +205,18 @@ export const useDesktopStore = defineStore('desktop', () => {
       .filter(id => validAppIds.has(id))
       .slice(0, 8)
 
+    trashedAppIds.value = readStorageList(TRASHED_APPS_STORAGE_KEY)
+      .filter(id => validAppIds.has(id))
+
+    removedAppIds.value = readStorageList(REMOVED_APPS_STORAGE_KEY)
+      .filter(id => validAppIds.has(id))
+
     loadSettings()
+  }
+
+  const saveTrashState = () => {
+    writeStorageList(TRASHED_APPS_STORAGE_KEY, trashedAppIds.value)
+    writeStorageList(REMOVED_APPS_STORAGE_KEY, removedAppIds.value)
   }
 
   const loadSettings = () => {
@@ -275,6 +306,97 @@ export const useDesktopStore = defineStore('desktop', () => {
     writeStorageList(RECENT_APPS_STORAGE_KEY, recentAppIds.value)
   }
 
+  const sanitizeAppFromQuickLists = (appId) => {
+    pinnedAppIds.value = pinnedAppIds.value.filter(id => id !== appId)
+    recentAppIds.value = recentAppIds.value.filter(id => id !== appId)
+    writeStorageList(PINNED_APPS_STORAGE_KEY, pinnedAppIds.value)
+    writeStorageList(RECENT_APPS_STORAGE_KEY, recentAppIds.value)
+  }
+
+  const closeWindowsByAppId = (appId) => {
+    const closingIds = windows.value.filter(w => w.appId === appId).map(w => w.id)
+    if (!closingIds.length) return
+    windows.value = windows.value.filter(w => w.appId !== appId)
+
+    if (activeWindowId.value && closingIds.includes(activeWindowId.value)) {
+      const remaining = windows.value.filter(w => !w.minimized)
+      activeWindowId.value = remaining.length > 0 ? remaining[remaining.length - 1].id : null
+      if (remaining.length > 0) remaining[remaining.length - 1].focused = true
+    }
+  }
+
+  const canTrashApp = (appId) => appId !== 'terminal' && appId !== 'settings'
+
+  const moveAppToTrash = (appId) => {
+    const app = apps.value.find(item => item.id === appId)
+    if (!app) return
+    if (!canTrashApp(appId)) return
+    if (trashedAppIds.value.includes(appId)) return
+    if (removedAppIds.value.includes(appId)) return
+
+    trashedAppIds.value = [appId, ...trashedAppIds.value.filter(id => id !== appId)]
+    sanitizeAppFromQuickLists(appId)
+    closeWindowsByAppId(appId)
+    saveTrashState()
+  }
+
+  const restoreAppFromTrash = (appId) => {
+    if (!trashedAppIds.value.includes(appId)) return
+    trashedAppIds.value = trashedAppIds.value.filter(id => id !== appId)
+    saveTrashState()
+  }
+
+  const deleteFromTrash = (appId) => {
+    if (!trashedAppIds.value.includes(appId)) return
+    trashedAppIds.value = trashedAppIds.value.filter(id => id !== appId)
+    removedAppIds.value = [appId, ...removedAppIds.value.filter(id => id !== appId)]
+    sanitizeAppFromQuickLists(appId)
+    closeWindowsByAppId(appId)
+    saveTrashState()
+  }
+
+  const emptyTrash = () => {
+    if (!trashedAppIds.value.length) return
+    const toDelete = [...trashedAppIds.value]
+    trashedAppIds.value = []
+    removedAppIds.value = [...new Set([...toDelete, ...removedAppIds.value])]
+    toDelete.forEach((appId) => {
+      sanitizeAppFromQuickLists(appId)
+      closeWindowsByAppId(appId)
+    })
+    saveTrashState()
+  }
+
+  const openTrashWindow = () => {
+    const existingWindow = windows.value.find(w => w.appId === 'trash' && !w.minimized)
+    if (existingWindow) {
+      bringToFront(existingWindow.id)
+      return
+    }
+
+    const newWindow = {
+      id: `window-${Date.now()}`,
+      appId: 'trash',
+      title: '废纸篓',
+      icon: '🗑️',
+      url: null,
+      x: 130 + (windows.value.length * 24),
+      y: 90 + (windows.value.length * 24),
+      width: 820,
+      height: 560,
+      zIndex: ++maxZIndex.value,
+      minimized: false,
+      maximized: false,
+      focused: true,
+    }
+
+    windows.value.forEach(w => {
+      w.focused = false
+    })
+    windows.value.push(newWindow)
+    activeWindowId.value = newWindow.id
+  }
+
   const probeUrl = async (url, timeoutMs = 6000) => {
     if (typeof window === 'undefined') return false
 
@@ -337,6 +459,7 @@ export const useDesktopStore = defineStore('desktop', () => {
   const openWindow = (appId) => {
     const app = apps.value.find(a => a.id === appId)
     if (!app) return
+    if (trashedAppIds.value.includes(appId) || removedAppIds.value.includes(appId)) return
 
     const shouldNavigate = app.url && app.id !== 'terminal' && app.id !== 'settings'
     if (shouldNavigate) {
@@ -576,8 +699,13 @@ export const useDesktopStore = defineStore('desktop', () => {
     serviceSummary,
     pinnedAppIds,
     recentAppIds,
+    trashedAppIds,
+    removedAppIds,
     pinnedApps,
     recentApps,
+    desktopApps,
+    trashedApps,
+    trashCount,
     isMonitoringStatus,
     lastStatusCheckAt,
     openWindow,
@@ -606,6 +734,11 @@ export const useDesktopStore = defineStore('desktop', () => {
     loadSettings,
     togglePinnedApp,
     recordAppLaunch,
+    moveAppToTrash,
+    restoreAppFromTrash,
+    deleteFromTrash,
+    emptyTrash,
+    openTrashWindow,
     checkServiceStatuses,
     startStatusMonitoring,
     stopStatusMonitoring,

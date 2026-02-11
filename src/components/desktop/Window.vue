@@ -39,6 +39,7 @@
     <div class="flex-1 bg-white/86 dark:bg-slate-950/76 backdrop-blur-md overflow-hidden relative">
       <TerminalPanel v-if="window.appId === 'terminal'" />
       <SettingsPanel v-else-if="window.appId === 'settings'" />
+      <TrashPanel v-else-if="window.appId === 'trash'" />
       <iframe
         v-else-if="window.url"
         :src="window.url"
@@ -68,6 +69,7 @@ import { computed, ref } from 'vue'
 import { useDesktopStore } from '../../stores/desktop.js'
 import TerminalPanel from './TerminalPanel.vue'
 import SettingsPanel from './SettingsPanel.vue'
+import TrashPanel from './TrashPanel.vue'
 
 const props = defineProps({
   window: {
