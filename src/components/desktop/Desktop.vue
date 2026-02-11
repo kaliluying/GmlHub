@@ -42,9 +42,6 @@
       <div class="flex items-center gap-2 md:gap-4">
         <span class="font-bold text-gray-800 text-base">🍎</span>
         <span class="font-semibold text-gray-800 tracking-wide">个人OS</span>
-        <span class="hidden md:inline text-sm text-gray-600">文件</span>
-        <span class="hidden md:inline text-sm text-gray-600">编辑</span>
-        <span class="hidden md:inline text-sm text-gray-600">视图</span>
       </div>
       <div class="flex items-center gap-2 md:gap-4">
         <div class="hidden lg:flex items-center gap-1.5 text-[11px]">
