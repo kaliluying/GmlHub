@@ -17,30 +17,21 @@
       {{ app.name }}
     </span>
 
-    <Teleport to="body">
-      <div
-        v-if="contextMenu.show"
-        ref="menuRef"
-        class="icon-context-menu fixed min-w-[130px] rounded-xl border border-white/25 bg-slate-900/90 text-slate-100 shadow-2xl py-1.5 z-[9999]"
-        :style="{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }"
-        @click.stop
-      >
-        <button class="icon-menu-item" @click="openFromMenu">打开</button>
-        <button
-          v-if="props.app.id !== 'terminal' && props.app.id !== 'settings'"
-          class="icon-menu-item text-rose-300"
-          @click="moveToTrash"
-        >
-          移到废纸篓
-        </button>
-      </div>
-    </Teleport>
+    <ContextMenu
+      :show="contextMenu.show"
+      :x="contextMenu.x"
+      :y="contextMenu.y"
+      :items="iconMenuItems"
+      @select="handleMenuSelect"
+      @close="closeContextMenu"
+    />
   </div>
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useDesktopStore } from '../../stores/desktop.js'
+import ContextMenu from './ContextMenu.vue'
 
 const props = defineProps({
   app: {
@@ -55,10 +46,17 @@ const props = defineProps({
 
 const store = useDesktopStore()
 const contextMenu = ref({ show: false, x: 0, y: 0 })
-const menuRef = ref(null)
 
 const ICON_MENU_EVENT = 'desktop:icon-context-menu-open'
 const DESKTOP_MENU_EVENT = 'desktop:context-menu-open'
+
+const iconMenuItems = computed(() => {
+  const items = [{ key: 'open', label: '打开' }]
+  if (props.app.id !== 'terminal' && props.app.id !== 'settings') {
+    items.push({ key: 'trash', label: '移到废纸篓', danger: true })
+  }
+  return items
+})
 
 const wrapperClass = computed(() => {
   if (props.iconSize === 'small') return 'gap-2 p-2 sm:p-2.5'
@@ -82,26 +80,13 @@ const handleDoubleClick = () => {
   store.openWindow(props.app.id)
 }
 
-const handleContextMenu = async (event) => {
+const handleContextMenu = (event) => {
   window.dispatchEvent(new CustomEvent(ICON_MENU_EVENT, { detail: props.app.id }))
 
   contextMenu.value = {
     show: true,
     x: event.clientX,
     y: event.clientY,
-  }
-
-  await nextTick()
-  const menuEl = menuRef.value
-  if (!menuEl) return
-
-  const rect = menuEl.getBoundingClientRect()
-  const maxX = window.innerWidth - rect.width - 8
-  const maxY = window.innerHeight - rect.height - 8
-  contextMenu.value = {
-    show: true,
-    x: Math.max(8, Math.min(event.clientX, maxX)),
-    y: Math.max(8, Math.min(event.clientY, maxY)),
   }
 }
 
@@ -120,6 +105,17 @@ const moveToTrash = () => {
   store.moveAppToTrash(props.app.id)
 }
 
+const handleMenuSelect = (key) => {
+  if (key === 'open') {
+    openFromMenu()
+    return
+  }
+
+  if (key === 'trash') {
+    moveToTrash()
+  }
+}
+
 const handleOpenSignal = (event) => {
   if (event.detail === props.app.id) return
   closeContextMenu()
@@ -129,22 +125,12 @@ const handleDesktopMenuOpen = () => {
   closeContextMenu()
 }
 
-const handleDocumentContextMenu = (event) => {
-  const target = event.target
-  if (target instanceof Element && target.closest('.icon-context-menu')) return
-  closeContextMenu()
-}
-
 onMounted(() => {
-  document.addEventListener('click', closeContextMenu)
-  document.addEventListener('contextmenu', handleDocumentContextMenu, true)
   window.addEventListener(ICON_MENU_EVENT, handleOpenSignal)
   window.addEventListener(DESKTOP_MENU_EVENT, handleDesktopMenuOpen)
 })
 
 onUnmounted(() => {
-  document.removeEventListener('click', closeContextMenu)
-  document.removeEventListener('contextmenu', handleDocumentContextMenu, true)
   window.removeEventListener(ICON_MENU_EVENT, handleOpenSignal)
   window.removeEventListener(DESKTOP_MENU_EVENT, handleDesktopMenuOpen)
 })
@@ -153,17 +139,6 @@ onUnmounted(() => {
 <style scoped>
 .app-icon {
   width: 86px;
-}
-
-.icon-menu-item {
-  width: 100%;
-  text-align: left;
-  padding: 6px 10px;
-  font-size: 12px;
-}
-
-.icon-menu-item:hover {
-  background: rgba(148, 163, 184, 0.22);
 }
 
 @media (min-width: 640px) {

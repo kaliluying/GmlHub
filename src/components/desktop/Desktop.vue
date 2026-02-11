@@ -23,7 +23,7 @@
     <div class="cyber-noise-layer" />
     <div v-if="store.settings.codeRainEnabled" class="cyber-code-rain">
       <span
-        v-for="column in codeColumns"
+        v-for="column in visibleCodeColumns"
         :key="column.id"
         class="code-column"
         :style="codeColumnStyle(column)"
@@ -204,19 +204,16 @@
     <Dock v-if="store.settings.showDock" class="z-30" />
     
     <!-- 右键菜单 -->
-    <div
-      v-if="contextMenu.show"
-      class="context-menu absolute glass-strong rounded-xl shadow-2xl py-2 min-w-[160px] z-50"
-      :style="{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }"
-    >
-      <div class="px-4 py-2 hover:bg-gray-200/50 cursor-pointer text-sm" @click="refreshDesktop">
-        刷新
-      </div>
-      <div class="border-t border-gray-200/50 my-1" />
-      <div class="px-4 py-2 hover:bg-gray-200/50 cursor-pointer text-sm" @click="changeWallpaper">
-        切换动态背景
-      </div>
-    </div>
+    <ContextMenu
+      :show="contextMenu.show"
+      :x="contextMenu.x"
+      :y="contextMenu.y"
+      :items="desktopMenuItems"
+      :min-width="160"
+      :z-index="120"
+      @select="handleDesktopMenuSelect"
+      @close="hideContextMenu"
+    />
   </div>
 </template>
 
@@ -226,6 +223,7 @@ import { useDesktopStore } from '../../stores/desktop.js'
 import AppIcon from './AppIcon.vue'
 import Window from './Window.vue'
 import Dock from './Dock.vue'
+import ContextMenu from './ContextMenu.vue'
 
 const store = useDesktopStore()
 const currentTime = ref('')
@@ -233,8 +231,11 @@ const contextMenu = ref({ show: false, x: 0, y: 0 })
 const pointer = ref({ x: 50, y: 50, active: false })
 const launcherInput = ref(null)
 const launcher = ref({ open: false, query: '', selectedIndex: 0 })
+const prefersReducedMotion = ref(false)
+const isPageVisible = ref(true)
 const DESKTOP_MENU_EVENT = 'desktop:context-menu-open'
 const ICON_MENU_EVENT = 'desktop:icon-context-menu-open'
+let reducedMotionMedia = null
 
 const wallpaperPresets = [
   {
@@ -326,7 +327,18 @@ const motionProfiles = {
   high: { opacity: 1.16, speed: 0.84, pointer: 1.2 },
 }
 
-const motionProfile = computed(() => motionProfiles[store.settings.motionLevel] || motionProfiles.medium)
+const effectiveMotionLevel = computed(() => {
+  if (prefersReducedMotion.value) return 'low'
+  return store.settings.motionLevel
+})
+
+const motionProfile = computed(() => motionProfiles[effectiveMotionLevel.value] || motionProfiles.medium)
+
+const visibleCodeColumns = computed(() => {
+  if (effectiveMotionLevel.value === 'low') return codeColumns.slice(0, 6)
+  if (effectiveMotionLevel.value === 'medium') return codeColumns.slice(0, 9)
+  return codeColumns
+})
 
 const filteredApps = computed(() => {
   const query = launcher.value.query.trim().toLowerCase()
@@ -365,6 +377,12 @@ const desktopIconGridClass = computed(() => {
   if (store.settings.iconSize === 'large') return 'md:gap-5 lg:gap-6'
   return ''
 })
+
+const desktopMenuItems = computed(() => [
+  { key: 'refresh', label: '刷新' },
+  { key: 'divider-1', type: 'divider' },
+  { key: 'wallpaper', label: '切换动态背景' },
+])
 
 const panelQuickApps = computed(() => {
   const preferred = ['github', 'bilibili', 'blog', 'tools', 'wiki', 'vault']
@@ -432,7 +450,18 @@ onMounted(() => {
   }
   updateTime()
   timeInterval = setInterval(updateTime, 1000)
-  document.addEventListener('click', hideContextMenu)
+
+  if (typeof window !== 'undefined' && window.matchMedia) {
+    reducedMotionMedia = window.matchMedia('(prefers-reduced-motion: reduce)')
+    prefersReducedMotion.value = reducedMotionMedia.matches
+    reducedMotionMedia.addEventListener('change', handleReducedMotionChange)
+  }
+
+  if (typeof document !== 'undefined') {
+    isPageVisible.value = document.visibilityState !== 'hidden'
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+  }
+
   window.addEventListener('keydown', handleGlobalKeydown)
   window.addEventListener(ICON_MENU_EVENT, hideContextMenu)
 })
@@ -454,10 +483,28 @@ watch(
 onUnmounted(() => {
   if (timeInterval) clearInterval(timeInterval)
   store.stopStatusMonitoring()
-  document.removeEventListener('click', hideContextMenu)
+
+  if (reducedMotionMedia) {
+    reducedMotionMedia.removeEventListener('change', handleReducedMotionChange)
+    reducedMotionMedia = null
+  }
+
+  if (typeof document !== 'undefined') {
+    document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }
+
   window.removeEventListener('keydown', handleGlobalKeydown)
   window.removeEventListener(ICON_MENU_EVENT, hideContextMenu)
 })
+
+const handleReducedMotionChange = (event) => {
+  prefersReducedMotion.value = event.matches
+}
+
+const handleVisibilityChange = () => {
+  if (typeof document === 'undefined') return
+  isPageVisible.value = document.visibilityState !== 'hidden'
+}
 
 watch(
   () => store.settings.darkMode,
@@ -481,6 +528,7 @@ const desktopStyle = computed(() => ({
   '--cyber-fx-opacity': motionProfile.value.opacity,
   '--cyber-fx-speed': motionProfile.value.speed,
   '--cyber-pointer-scale': motionProfile.value.pointer,
+  '--cyber-fx-play-state': isPageVisible.value ? 'running' : 'paused',
 }))
 
 const wallpaperStyle = computed(() => {
@@ -488,6 +536,7 @@ const wallpaperStyle = computed(() => {
     backgroundImage: activePreset.value.wallpaper,
     backgroundSize: '200% 200%',
     animation: 'wallpaper-drift 24s ease-in-out infinite',
+    animationPlayState: isPageVisible.value ? 'running' : 'paused',
   }
 })
 
@@ -612,6 +661,17 @@ const showContextMenu = (e) => {
     show: true,
     x: e.clientX,
     y: e.clientY,
+  }
+}
+
+const handleDesktopMenuSelect = (key) => {
+  if (key === 'refresh') {
+    refreshDesktop()
+    return
+  }
+
+  if (key === 'wallpaper') {
+    changeWallpaper()
   }
 }
 
@@ -742,6 +802,7 @@ const changeWallpaper = () => {
   background-position: 0 0, 0 0, center;
   mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.78) 0%, rgba(0, 0, 0, 0.28) 100%);
   animation: tech-grid-shift calc(22s * var(--cyber-fx-speed, 1)) linear infinite;
+  animation-play-state: var(--cyber-fx-play-state, running);
   opacity: calc(0.5 * var(--cyber-fx-opacity, 1));
 }
 
@@ -755,6 +816,7 @@ const changeWallpaper = () => {
   mix-blend-mode: screen;
   opacity: calc(0.55 * var(--cyber-fx-opacity, 1));
   animation: tech-scan-move calc(11s * var(--cyber-fx-speed, 1)) linear infinite;
+  animation-play-state: var(--cyber-fx-play-state, running);
 }
 
 .tech-glow-layer {
@@ -764,6 +826,7 @@ const changeWallpaper = () => {
     radial-gradient(circle at 78% 78%, rgba(var(--cyber-glow-c-rgb), 0.16) 0%, rgba(var(--cyber-glow-c-rgb), 0) 36%),
     radial-gradient(circle at 54% 44%, rgba(var(--cyber-glow-b-rgb), 0.12) 0%, rgba(var(--cyber-glow-b-rgb), 0) 42%);
   animation: tech-glow-pan calc(18s * var(--cyber-fx-speed, 1)) ease-in-out infinite;
+  animation-play-state: var(--cyber-fx-play-state, running);
 }
 
 .tech-node {
@@ -776,6 +839,7 @@ const changeWallpaper = () => {
     0 0 0 0 rgba(var(--cyber-beam-rgb), 0.48),
     0 0 18px rgba(var(--cyber-beam-rgb), 0.7);
   animation: tech-node-pulse calc(4.2s * var(--cyber-fx-speed, 1)) ease-out infinite;
+  animation-play-state: var(--cyber-fx-play-state, running);
 }
 
 .tech-beam {
@@ -813,6 +877,7 @@ const changeWallpaper = () => {
   background-image: radial-gradient(circle, rgba(var(--cyber-node-rgb), 0.4) 0.7px, transparent 0.7px);
   background-size: 3px 3px;
   animation: cyber-noise-shift calc(0.55s * var(--cyber-fx-speed, 1)) steps(2) infinite;
+  animation-play-state: var(--cyber-fx-play-state, running);
 }
 
 .cyber-code-rain {
@@ -837,18 +902,21 @@ const changeWallpaper = () => {
     0 0 8px rgba(var(--cyber-beam-rgb), 0.55),
     0 0 20px rgba(var(--cyber-glow-a-rgb), 0.36);
   animation: cyber-code-fall linear infinite;
+  animation-play-state: var(--cyber-fx-play-state, running);
 }
 
 .beam-a {
   top: -32%;
   left: -10%;
   animation: tech-beam-drift-a calc(17s * var(--cyber-fx-speed, 1)) ease-in-out infinite;
+  animation-play-state: var(--cyber-fx-play-state, running);
 }
 
 .beam-b {
   right: -14%;
   bottom: -34%;
   animation: tech-beam-drift-b calc(20s * var(--cyber-fx-speed, 1)) ease-in-out infinite;
+  animation-play-state: var(--cyber-fx-play-state, running);
 }
 
 .menu-bar {

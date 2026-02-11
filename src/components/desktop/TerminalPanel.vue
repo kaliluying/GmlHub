@@ -27,8 +27,10 @@
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useDesktopStore } from '../../stores/desktop.js'
+import { useVirtualFsStore } from '../../stores/virtualFs.js'
 
 const store = useDesktopStore()
+const fsStore = useVirtualFsStore()
 
 const lines = ref([
   { kind: 'info', text: 'GML Portal Terminal v0.1' },
@@ -61,19 +63,6 @@ const commandAliases = {
   cls: 'clear',
 }
 const availableCommands = [...baseCommands, ...Object.keys(commandAliases)]
-
-const fakeFiles = {
-  '/': ['home', 'etc', 'var', 'tmp'],
-  '/home': ['gml'],
-  '/home/gml': ['projects', 'notes.txt', 'todo.md', '.bashrc'],
-  '/home/gml/projects': ['portal-ui', 'tools-api', 'wiki-core'],
-}
-
-const fakeFileContents = {
-  '/home/gml/notes.txt': 'Portal MVP\n- desktop ui\n- launcher\n- fake terminal',
-  '/home/gml/todo.md': '# TODO\n- health api aggregator\n- add auth\n- add audit log',
-  '/home/gml/.bashrc': 'export TERM=xterm-256color\nalias ll="ls -la"',
-}
 
 const parseArgs = (raw = '') => raw.trim().split(/\s+/).filter(Boolean)
 
@@ -160,81 +149,29 @@ const prompt = computed(() => {
 })
 
 const resolvePath = (inputPath) => {
-  if (!inputPath || inputPath === '.') return cwd.value
-  if (inputPath === '~') return '/home/gml'
-  if (inputPath.startsWith('~/')) return `/home/gml/${inputPath.slice(2)}`
-  const source = inputPath.startsWith('/') ? inputPath : `${cwd.value}/${inputPath}`
-  const parts = source.split('/').filter(Boolean)
-  const stack = []
-
-  for (const part of parts) {
-    if (part === '.') continue
-    if (part === '..') {
-      stack.pop()
-      continue
-    }
-    stack.push(part)
-  }
-
-  return `/${stack.join('/')}` || '/'
+  return fsStore.resolvePath(inputPath, cwd.value)
 }
 
-const isDirectory = (path) => Object.prototype.hasOwnProperty.call(fakeFiles, path)
-
-const listDirectory = (path) => fakeFiles[path] || []
-const fileExists = (path) => Object.prototype.hasOwnProperty.call(fakeFileContents, path)
-
-const getParentPath = (path) => {
-  if (!path || path === '/') return '/'
-  const normalized = path.endsWith('/') && path !== '/' ? path.slice(0, -1) : path
-  const index = normalized.lastIndexOf('/')
-  if (index <= 0) return '/'
-  return normalized.slice(0, index)
-}
-
-const getBaseName = (path) => {
-  if (!path || path === '/') return '/'
-  const normalized = path.endsWith('/') && path !== '/' ? path.slice(0, -1) : path
-  return normalized.split('/').filter(Boolean).pop() || '/'
-}
-
-const addEntryToDirectory = (dirPath, name) => {
-  if (!isDirectory(dirPath)) return
-  if (!fakeFiles[dirPath].includes(name)) {
-    fakeFiles[dirPath].push(name)
-    fakeFiles[dirPath].sort((a, b) => a.localeCompare(b, 'en'))
-  }
-}
-
-const removeEntryFromDirectory = (dirPath, name) => {
-  if (!isDirectory(dirPath)) return
-  fakeFiles[dirPath] = fakeFiles[dirPath].filter(item => item !== name)
-}
-
-const removeDirectoryTree = (dirPath) => {
-  const entries = [...listDirectory(dirPath)]
-  for (const name of entries) {
-    const childPath = dirPath === '/' ? `/${name}` : `${dirPath}/${name}`
-    if (isDirectory(childPath)) {
-      removeDirectoryTree(childPath)
-      continue
-    }
-    delete fakeFileContents[childPath]
-  }
-  delete fakeFiles[dirPath]
-}
+const isDirectory = (path) => fsStore.isDirectory(path)
+const listDirectory = (path) => fsStore.listDirectory(path)
+const fileExists = (path) => fsStore.fileExists(path)
+const getParentPath = (path) => fsStore.getParentPath(path)
+const getBaseName = (path) => fsStore.getBaseName(path)
+const addEntryToDirectory = (dirPath, name) => fsStore.addEntryToDirectory(dirPath, name)
+const removeEntryFromDirectory = (dirPath, name) => fsStore.removeEntryFromDirectory(dirPath, name)
+const removeDirectoryTree = (dirPath) => fsStore.removeDirectoryTree(dirPath)
 
 const buildLsLongRow = (name, path) => {
   const fullPath = path === '/' ? `/${name}` : `${path}/${name}`
   const isDir = isDirectory(fullPath)
   const perms = isDir ? 'drwxr-xr-x' : '-rw-r--r--'
-  const size = isDir ? 4096 : (fakeFileContents[fullPath]?.length ?? 128)
+  const size = isDir ? 4096 : (fsStore.readFile(fullPath)?.length ?? 128)
   return `${perms} 1 gml gml ${String(size).padStart(5, ' ')} Feb 11 14:34 ${name}`
 }
 
 const resolveApp = (query) => {
   const normalized = query.toLowerCase()
-  return store.apps.find(app => {
+  return store.desktopApps.find(app => {
     const id = app.id.toLowerCase()
     const name = app.name.toLowerCase()
     const domain = (app.domain || '').toLowerCase()
@@ -258,7 +195,7 @@ const getCommonPrefix = (values) => {
 }
 
 const getAppCandidates = () => {
-  const ids = store.apps.map(app => app.id.toLowerCase())
+  const ids = store.desktopApps.map(app => app.id.toLowerCase())
   const unique = [...new Set(ids)]
   return unique.sort((a, b) => a.localeCompare(b, 'en'))
 }
@@ -409,7 +346,7 @@ const handleTabComplete = async () => {
   }
 
   if (commandName === 'ping' || commandName === 'curl') {
-    const candidates = store.apps.map(app => app.domain).filter(Boolean)
+    const candidates = store.desktopApps.map(app => app.domain).filter(Boolean)
     const matches = candidates.filter(item => item.startsWith(currentArg))
     if (!matches.length) return
 
@@ -600,7 +537,7 @@ const handleCat = async (target) => {
   }
 
   const path = resolvePath(target)
-  const content = fakeFileContents[path]
+  const content = fsStore.readFile(path)
   if (!content) {
     await pushLine('error', `cat: ${target}: No such file`)
     return
@@ -842,7 +779,7 @@ const parseLineRangeArgs = async (rawTarget, commandName) => {
   }
 
   const path = resolvePath(pathArg)
-  const content = fakeFileContents[path]
+  const content = fsStore.readFile(path)
   if (content == null) {
     await pushLine('error', `${commandName}: ${pathArg}: No such file`)
     return null
@@ -882,7 +819,7 @@ const handleGrep = async (rawTarget) => {
   const pattern = args[0]
   const fileArg = args[1]
   const path = resolvePath(fileArg)
-  const content = fakeFileContents[path]
+  const content = fsStore.readFile(path)
   if (content == null) {
     await pushLine('error', `grep: ${fileArg}: No such file`)
     return
@@ -916,7 +853,7 @@ const handleWc = async (rawTarget) => {
 
   const fileArg = args[1]
   const path = resolvePath(fileArg)
-  const content = fakeFileContents[path]
+  const content = fsStore.readFile(path)
   if (content == null) {
     await pushLine('error', `wc: ${fileArg}: No such file`)
     return
@@ -975,8 +912,7 @@ const handleMkdir = async (rawTarget) => {
       return
     }
 
-    fakeFiles[current] = []
-    addEntryToDirectory(parent, getBaseName(current))
+    fsStore.createDirectory(current)
   }
 }
 
@@ -1001,8 +937,7 @@ const handleTouch = async (rawTarget) => {
   }
 
   if (!fileExists(targetPath)) {
-    fakeFileContents[targetPath] = ''
-    addEntryToDirectory(parent, getBaseName(targetPath))
+    fsStore.writeFile(targetPath, '')
   }
 }
 
@@ -1061,8 +996,7 @@ const handleRm = async (rawTarget) => {
   }
 
   if (fileExists(targetPath)) {
-    delete fakeFileContents[targetPath]
-    removeEntryFromDirectory(getParentPath(targetPath), getBaseName(targetPath))
+    fsStore.deleteFile(targetPath)
     return
   }
 
