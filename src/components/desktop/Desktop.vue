@@ -1,0 +1,947 @@
+<template>
+  <div 
+    class="desktop w-full h-full relative overflow-hidden"
+    :style="desktopStyle"
+    @contextmenu.prevent="showContextMenu"
+    @mousemove="handlePointerMove"
+    @mouseleave="resetPointer"
+  >
+    <!-- 壁纸层 -->
+    <div class="absolute inset-0 z-0" :style="wallpaperStyle" />
+    <div class="tech-grid-layer absolute inset-0 z-[1]" />
+    <div class="tech-scan-layer absolute inset-0 z-[2]" />
+    <div class="tech-glow-layer absolute inset-0 z-[3]" />
+    <div
+      v-for="node in techNodes"
+      :key="node.id"
+      class="tech-node"
+      :style="nodeStyle(node)"
+    />
+    <div class="tech-beam beam-a" />
+    <div class="tech-beam beam-b" />
+    <div class="cyber-pointer-glow" :style="pointerGlowStyle" />
+    <div class="cyber-noise-layer" />
+    <div v-if="store.settings.codeRainEnabled" class="cyber-code-rain">
+      <span
+        v-for="column in codeColumns"
+        :key="column.id"
+        class="code-column"
+        :style="codeColumnStyle(column)"
+      >
+        {{ column.text }}
+      </span>
+    </div>
+    <div class="absolute inset-0 z-[8] pointer-events-none bg-[radial-gradient(circle_at_16%_20%,rgba(255,255,255,0.08),transparent_56%),radial-gradient(circle_at_82%_78%,rgba(14,165,233,0.08),transparent_48%)]" />
+    <div class="ambient-wave wave-a bg-[radial-gradient(circle,rgba(56,189,248,0.12)_0%,rgba(56,189,248,0)_68%)]" />
+    <div class="ambient-wave wave-b bg-[radial-gradient(circle,rgba(125,211,252,0.12)_0%,rgba(125,211,252,0)_68%)]" />
+    <div class="ambient-orb w-72 h-72 -top-36 -left-32 bg-cyan-200/14" />
+    <div class="ambient-orb w-96 h-96 bottom-[-140px] right-[-90px] bg-sky-300/18" />
+    
+    <!-- 顶部菜单栏 -->
+    <div class="menu-bar h-10 flex items-center justify-between px-3 md:px-5 glass fixed top-0 left-0 right-0 z-40">
+      <div class="flex items-center gap-2 md:gap-4">
+        <span class="font-bold text-gray-800 text-base">🍎</span>
+        <span class="font-semibold text-gray-800 tracking-wide">个人OS</span>
+        <span class="hidden md:inline text-sm text-gray-600">文件</span>
+        <span class="hidden md:inline text-sm text-gray-600">编辑</span>
+        <span class="hidden md:inline text-sm text-gray-600">视图</span>
+      </div>
+      <div class="flex items-center gap-2 md:gap-4">
+        <div class="hidden lg:flex items-center gap-1.5 text-[11px]">
+          <span class="status-pill bg-emerald-400/25 text-emerald-100">在线 {{ store.serviceSummary.online }}</span>
+          <span class="status-pill bg-rose-300/25 text-rose-100">离线 {{ store.serviceSummary.offline }}</span>
+          <span v-if="store.isMonitoringStatus" class="status-pill bg-cyan-300/25 text-cyan-100">检测中</span>
+        </div>
+        <button
+          class="h-7 rounded-full px-3 bg-white/50 text-xs text-gray-700 hover:text-gray-900 hover:bg-white/70 transition"
+          @click="changeWallpaper"
+        >
+          换风格
+        </button>
+        <button
+          class="h-7 rounded-full px-3 bg-black/25 text-[11px] text-slate-100 hover:bg-black/40 transition"
+          @click="openLauncher"
+        >
+          Ctrl+K
+        </button>
+        <span class="text-sm font-medium text-gray-800 min-w-[46px] text-right">{{ currentTime }}</span>
+      </div>
+    </div>
+
+    <div v-if="launcher.open" class="launcher-overlay" @click="closeLauncher">
+      <div class="launcher-panel glass-strong" @click.stop>
+        <input
+          ref="launcherInput"
+          v-model="launcher.query"
+          class="launcher-input"
+          type="text"
+          placeholder="搜索应用：Tools / 知识库 / 密码箱 / 博客..."
+          @keydown.enter.prevent="launchSelected"
+          @keydown.down.prevent="moveSelection(1)"
+          @keydown.up.prevent="moveSelection(-1)"
+          @keydown.esc.prevent="closeLauncher"
+        />
+        <div v-if="!launcher.query && (store.pinnedApps.length || store.recentApps.length)" class="launcher-quick-zones">
+          <div v-if="store.pinnedApps.length" class="launcher-quick-row">
+            <span class="launcher-quick-label">置顶</span>
+            <button
+              v-for="app in store.pinnedApps"
+              :key="`pin-${app.id}`"
+              class="launcher-chip"
+              @click="openFromLauncher(app.id)"
+            >
+              {{ app.icon }} {{ app.name }}
+            </button>
+          </div>
+          <div v-if="store.recentApps.length" class="launcher-quick-row">
+            <span class="launcher-quick-label">最近</span>
+            <button
+              v-for="app in store.recentApps"
+              :key="`recent-${app.id}`"
+              class="launcher-chip launcher-chip-muted"
+              @click="openFromLauncher(app.id)"
+            >
+              {{ app.icon }} {{ app.name }}
+            </button>
+          </div>
+        </div>
+        <div class="launcher-list">
+          <button
+            v-for="(app, idx) in launcherApps"
+            :key="app.id"
+            class="launcher-item"
+            :class="{ 'is-active': idx === launcher.selectedIndex }"
+            @click="openFromLauncher(app.id)"
+            @mousemove="setSelectedIndex(idx)"
+          >
+            <span class="text-lg">{{ app.icon }}</span>
+            <span class="flex flex-col items-start min-w-0">
+              <span class="font-medium truncate max-w-full">{{ app.name }}</span>
+              <span class="text-xs text-slate-500 dark:text-slate-300 truncate max-w-full">{{ app.domain || app.description }}</span>
+            </span>
+            <span class="launcher-actions">
+              <button
+                class="pin-toggle"
+                :class="{ 'is-pinned': isPinned(app.id) }"
+                @click.stop="togglePinned(app.id)"
+              >
+                ★
+              </button>
+              <span class="launcher-status" :class="`status-${app.status || 'local'}`">{{ statusText(app.status) }}</span>
+            </span>
+          </button>
+          <div v-if="!launcherApps.length" class="px-4 py-6 text-center text-sm text-slate-500">
+            没找到匹配应用
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 桌面图标区域 -->
+    <div
+      class="desktop-icons relative z-20 pt-14 md:pt-16 px-3 pb-28 md:pb-32 md:px-8 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 sm:gap-3 md:gap-4 content-start max-w-6xl"
+      :class="desktopIconGridClass"
+    >
+      <AppIcon
+        v-for="app in store.apps"
+        :key="app.id"
+        :app="app"
+        :icon-size="store.settings.iconSize"
+      />
+    </div>
+    
+    <!-- 窗口层 -->
+    <Window
+      v-for="window in store.windows"
+      :key="window.id"
+      :window="window"
+    />
+    
+    <!-- Dock -->
+    <Dock v-if="store.settings.showDock" class="z-30" />
+    
+    <!-- 右键菜单 -->
+    <div
+      v-if="contextMenu.show"
+      class="context-menu absolute glass-strong rounded-xl shadow-2xl py-2 min-w-[160px] z-50"
+      :style="{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }"
+    >
+      <div class="px-4 py-2 hover:bg-gray-200/50 cursor-pointer text-sm" @click="refreshDesktop">
+        刷新
+      </div>
+      <div class="border-t border-gray-200/50 my-1" />
+      <div class="px-4 py-2 hover:bg-gray-200/50 cursor-pointer text-sm" @click="changeWallpaper">
+        切换动态背景
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { useDesktopStore } from '../../stores/desktop.js'
+import AppIcon from './AppIcon.vue'
+import Window from './Window.vue'
+import Dock from './Dock.vue'
+
+const store = useDesktopStore()
+const currentTime = ref('')
+const contextMenu = ref({ show: false, x: 0, y: 0 })
+const pointer = ref({ x: 50, y: 50, active: false })
+const launcherInput = ref(null)
+const launcher = ref({ open: false, query: '', selectedIndex: 0 })
+
+const wallpaperPresets = [
+  {
+    id: 'deep-net',
+    background: '#040912',
+    wallpaper: 'radial-gradient(circle at 14% 18%, rgba(56, 189, 248, 0.2) 0%, rgba(56, 189, 248, 0) 38%), radial-gradient(circle at 84% 74%, rgba(45, 212, 191, 0.16) 0%, rgba(45, 212, 191, 0) 42%), linear-gradient(132deg, #040912 0%, #09172d 46%, #0e2c44 100%)',
+    gridRgb: '56, 189, 248',
+    scanRgb: '125, 211, 252',
+    glowARgb: '34, 211, 238',
+    glowBRgb: '96, 165, 250',
+    glowCRgb: '45, 212, 191',
+    beamRgb: '56, 189, 248',
+    nodeRgb: '186, 230, 253',
+    codeRgb: '125, 211, 252',
+  },
+  {
+    id: 'neon-core',
+    background: '#15030e',
+    wallpaper: 'radial-gradient(circle at 20% 22%, rgba(251, 113, 133, 0.25) 0%, rgba(251, 113, 133, 0) 36%), radial-gradient(circle at 78% 78%, rgba(244, 63, 94, 0.2) 0%, rgba(244, 63, 94, 0) 44%), linear-gradient(136deg, #17040f 0%, #2a0a1f 48%, #3c1332 100%)',
+    gridRgb: '251, 113, 133',
+    scanRgb: '253, 164, 175',
+    glowARgb: '244, 63, 94',
+    glowBRgb: '190, 24, 93',
+    glowCRgb: '249, 168, 212',
+    beamRgb: '244, 63, 94',
+    nodeRgb: '254, 205, 211',
+    codeRgb: '253, 164, 175',
+  },
+  {
+    id: 'quantum-green',
+    background: '#03120a',
+    wallpaper: 'radial-gradient(circle at 18% 74%, rgba(52, 211, 153, 0.22) 0%, rgba(52, 211, 153, 0) 42%), radial-gradient(circle at 82% 20%, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0) 38%), linear-gradient(134deg, #04160d 0%, #093321 50%, #0f4b2f 100%)',
+    gridRgb: '52, 211, 153',
+    scanRgb: '110, 231, 183',
+    glowARgb: '16, 185, 129',
+    glowBRgb: '20, 184, 166',
+    glowCRgb: '110, 231, 183',
+    beamRgb: '16, 185, 129',
+    nodeRgb: '187, 247, 208',
+    codeRgb: '110, 231, 183',
+  },
+  {
+    id: 'signal-amber',
+    background: '#130b02',
+    wallpaper: 'radial-gradient(circle at 14% 26%, rgba(251, 191, 36, 0.25) 0%, rgba(251, 191, 36, 0) 40%), radial-gradient(circle at 80% 70%, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0) 46%), linear-gradient(134deg, #180d03 0%, #3a2208 52%, #5a360f 100%)',
+    gridRgb: '251, 191, 36',
+    scanRgb: '253, 224, 71',
+    glowARgb: '245, 158, 11',
+    glowBRgb: '251, 146, 60',
+    glowCRgb: '253, 230, 138',
+    beamRgb: '251, 191, 36',
+    nodeRgb: '254, 243, 199',
+    codeRgb: '253, 224, 71',
+  },
+]
+
+const techNodes = [
+  { id: 'n1', top: '16%', left: '14%', size: 8, delay: '0s', duration: '3.8s' },
+  { id: 'n2', top: '24%', left: '42%', size: 10, delay: '1.2s', duration: '4.4s' },
+  { id: 'n3', top: '38%', left: '74%', size: 9, delay: '0.8s', duration: '3.6s' },
+  { id: 'n4', top: '56%', left: '18%', size: 12, delay: '1.6s', duration: '4.8s' },
+  { id: 'n5', top: '64%', left: '46%', size: 9, delay: '0.3s', duration: '4s' },
+  { id: 'n6', top: '72%', left: '82%', size: 11, delay: '2s', duration: '5.2s' },
+]
+
+const codeColumns = [
+  { id: 'c1', left: '4%', delay: '0s', duration: '15s', text: '1011001 01011 1110 001 1100101' },
+  { id: 'c2', left: '13%', delay: '2s', duration: '18s', text: 'SYN 4F B7 A1 C9 D2 8E 77' },
+  { id: 'c3', left: '22%', delay: '1.2s', duration: '14s', text: '0x7f 0x18 0xff 0x2a 0x41' },
+  { id: 'c4', left: '31%', delay: '3.1s', duration: '16s', text: 'AI CORE > boot.sequence.pass' },
+  { id: 'c5', left: '40%', delay: '0.6s', duration: '19s', text: '110010 001011 011110 100001' },
+  { id: 'c6', left: '49%', delay: '2.4s', duration: '17s', text: 'SYS CLOCK 14:34:10 // ONLINE' },
+  { id: 'c7', left: '58%', delay: '1.8s', duration: '15.5s', text: 'AUTH BRIDGE // token refresh cycle' },
+  { id: 'c8', left: '67%', delay: '0.9s', duration: '18.4s', text: '0x91 0x2c 0xaf 0x44 0x10 0xff' },
+  { id: 'c9', left: '76%', delay: '2.9s', duration: '16.2s', text: 'NEURAL NET > route.trace.enabled' },
+  { id: 'c10', left: '85%', delay: '1.4s', duration: '17.6s', text: '001101 111000 010101 100111' },
+  { id: 'c11', left: '93%', delay: '3.3s', duration: '19.2s', text: 'EDGE LINK // heartbeat stable' },
+]
+
+const defaultPresetId = wallpaperPresets[0].id
+const activePreset = computed(() => {
+  const preset = wallpaperPresets.find(item => item.id === store.settings.wallpaper)
+  return preset || wallpaperPresets[0]
+})
+
+const motionProfiles = {
+  low: { opacity: 0.72, speed: 1.35, pointer: 0.62 },
+  medium: { opacity: 1, speed: 1, pointer: 1 },
+  high: { opacity: 1.16, speed: 0.84, pointer: 1.2 },
+}
+
+const motionProfile = computed(() => motionProfiles[store.settings.motionLevel] || motionProfiles.medium)
+
+const filteredApps = computed(() => {
+  const query = launcher.value.query.trim().toLowerCase()
+  if (!query) return store.apps
+
+  return store.apps.filter(app => {
+    const name = app.name.toLowerCase()
+    const desc = app.description?.toLowerCase() || ''
+    const domain = app.domain?.toLowerCase() || ''
+    return name.includes(query) || desc.includes(query) || domain.includes(query)
+  })
+})
+
+const launcherApps = computed(() => {
+  const query = launcher.value.query.trim().toLowerCase()
+  const pinnedSet = new Set(store.pinnedAppIds)
+  const recentSet = new Set(store.recentAppIds)
+
+  if (query) {
+    return [...filteredApps.value].sort((a, b) => {
+      const aPinned = pinnedSet.has(a.id) ? 1 : 0
+      const bPinned = pinnedSet.has(b.id) ? 1 : 0
+      if (aPinned !== bPinned) return bPinned - aPinned
+      return a.name.localeCompare(b.name, 'zh-CN')
+    })
+  }
+
+  const pinned = store.pinnedApps
+  const recent = store.recentApps.filter(app => !pinnedSet.has(app.id))
+  const others = store.apps.filter(app => !pinnedSet.has(app.id) && !recentSet.has(app.id))
+  return [...pinned, ...recent, ...others]
+})
+
+const desktopIconGridClass = computed(() => {
+  if (store.settings.iconSize === 'small') return 'md:gap-3'
+  if (store.settings.iconSize === 'large') return 'md:gap-5 lg:gap-6'
+  return ''
+})
+
+let timeInterval = null
+
+const updateTime = () => {
+  const now = new Date()
+  currentTime.value = now.toLocaleTimeString('zh-CN', { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    hour12: false 
+  })
+}
+
+onMounted(() => {
+  store.loadPortalState()
+  if (!wallpaperPresets.some(item => item.id === store.settings.wallpaper)) {
+    store.setWallpaper(defaultPresetId)
+  }
+  if (store.settings.autoStartMonitoring) {
+    store.startStatusMonitoring(store.settings.statusMonitorIntervalMs)
+  }
+  updateTime()
+  timeInterval = setInterval(updateTime, 1000)
+  document.addEventListener('click', hideContextMenu)
+  window.addEventListener('keydown', handleGlobalKeydown)
+})
+
+watch(
+  () => launcherApps.value.length,
+  (length) => {
+    if (length === 0) {
+      launcher.value.selectedIndex = 0
+      return
+    }
+
+    if (launcher.value.selectedIndex >= length) {
+      launcher.value.selectedIndex = 0
+    }
+  },
+)
+
+onUnmounted(() => {
+  if (timeInterval) clearInterval(timeInterval)
+  store.stopStatusMonitoring()
+  document.removeEventListener('click', hideContextMenu)
+  window.removeEventListener('keydown', handleGlobalKeydown)
+})
+
+watch(
+  () => store.settings.darkMode,
+  (enabled) => {
+    if (typeof document === 'undefined') return
+    document.documentElement.classList.toggle('dark', enabled)
+  },
+  { immediate: true },
+)
+
+const desktopStyle = computed(() => ({
+  background: activePreset.value.background,
+  '--cyber-grid-rgb': activePreset.value.gridRgb,
+  '--cyber-scan-rgb': activePreset.value.scanRgb,
+  '--cyber-glow-a-rgb': activePreset.value.glowARgb,
+  '--cyber-glow-b-rgb': activePreset.value.glowBRgb,
+  '--cyber-glow-c-rgb': activePreset.value.glowCRgb,
+  '--cyber-beam-rgb': activePreset.value.beamRgb,
+  '--cyber-node-rgb': activePreset.value.nodeRgb,
+  '--cyber-code-rgb': activePreset.value.codeRgb,
+  '--cyber-fx-opacity': motionProfile.value.opacity,
+  '--cyber-fx-speed': motionProfile.value.speed,
+  '--cyber-pointer-scale': motionProfile.value.pointer,
+}))
+
+const wallpaperStyle = computed(() => {
+  return {
+    backgroundImage: activePreset.value.wallpaper,
+    backgroundSize: '200% 200%',
+    animation: 'wallpaper-drift 24s ease-in-out infinite',
+  }
+})
+
+const nodeStyle = (node) => ({
+  top: node.top,
+  left: node.left,
+  width: `${node.size}px`,
+  height: `${node.size}px`,
+  animationDelay: node.delay,
+  animationDuration: node.duration,
+})
+
+const pointerGlowStyle = computed(() => {
+  const opacity = pointer.value.active ? 0.72 : 0.34
+  return {
+    '--pointer-x': `${pointer.value.x}%`,
+    '--pointer-y': `${pointer.value.y}%`,
+    opacity: opacity * motionProfile.value.pointer,
+  }
+})
+
+const codeColumnStyle = (column) => ({
+  left: column.left,
+  animationDelay: column.delay,
+  animationDuration: column.duration,
+})
+
+const handlePointerMove = (event) => {
+  const target = event.currentTarget
+  if (!target) return
+
+  const rect = target.getBoundingClientRect()
+  const x = ((event.clientX - rect.left) / rect.width) * 100
+  const y = ((event.clientY - rect.top) / rect.height) * 100
+
+  pointer.value = {
+    x: Math.min(100, Math.max(0, x)),
+    y: Math.min(100, Math.max(0, y)),
+    active: true,
+  }
+}
+
+const resetPointer = () => {
+  pointer.value.active = false
+}
+
+const handleGlobalKeydown = async (event) => {
+  const isLauncherShortcut = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k'
+  if (isLauncherShortcut) {
+    event.preventDefault()
+    if (launcher.value.open) {
+      closeLauncher()
+      return
+    }
+    await openLauncher()
+    return
+  }
+
+  if (event.key === 'Escape' && launcher.value.open) {
+    closeLauncher()
+  }
+}
+
+const openLauncher = async () => {
+  launcher.value.open = true
+  launcher.value.query = ''
+  launcher.value.selectedIndex = 0
+  await nextTick()
+  launcherInput.value?.focus()
+}
+
+const closeLauncher = () => {
+  launcher.value.open = false
+}
+
+const setSelectedIndex = (index) => {
+  launcher.value.selectedIndex = index
+}
+
+const moveSelection = (direction) => {
+  if (!launcherApps.value.length) return
+
+  const next = launcher.value.selectedIndex + direction
+  if (next < 0) {
+    launcher.value.selectedIndex = launcherApps.value.length - 1
+    return
+  }
+
+  launcher.value.selectedIndex = next % launcherApps.value.length
+}
+
+const openFromLauncher = (appId) => {
+  store.openWindow(appId)
+  closeLauncher()
+}
+
+const launchSelected = () => {
+  const selected = launcherApps.value[launcher.value.selectedIndex]
+  if (!selected) return
+  openFromLauncher(selected.id)
+}
+
+const isPinned = (appId) => store.pinnedAppIds.includes(appId)
+
+const togglePinned = (appId) => {
+  store.togglePinnedApp(appId)
+}
+
+const statusText = (status) => {
+  if (status === 'online') return '在线'
+  if (status === 'offline') return '离线'
+  return '在线'
+}
+
+const showContextMenu = (e) => {
+  contextMenu.value = {
+    show: true,
+    x: e.clientX,
+    y: e.clientY,
+  }
+}
+
+const hideContextMenu = () => {
+  contextMenu.value.show = false
+}
+
+const refreshDesktop = () => {
+  hideContextMenu()
+  // 刷新逻辑
+}
+
+const changeWallpaper = () => {
+  hideContextMenu()
+  const currentIndex = wallpaperPresets.findIndex(item => item.id === store.settings.wallpaper)
+  const nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % wallpaperPresets.length
+  store.setWallpaper(wallpaperPresets[nextIndex].id)
+}
+</script>
+
+<style scoped>
+.desktop {
+  user-select: none;
+}
+
+.tech-grid-layer {
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(var(--cyber-grid-rgb), 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--cyber-grid-rgb), 0.15) 1px, transparent 1px),
+    radial-gradient(circle at 50% 50%, rgba(var(--cyber-grid-rgb), 0.22) 0%, rgba(var(--cyber-grid-rgb), 0) 62%);
+  background-size: 52px 52px, 52px 52px, 100% 100%;
+  background-position: 0 0, 0 0, center;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.78) 0%, rgba(0, 0, 0, 0.28) 100%);
+  animation: tech-grid-shift calc(22s * var(--cyber-fx-speed, 1)) linear infinite;
+  opacity: calc(0.5 * var(--cyber-fx-opacity, 1));
+}
+
+.tech-scan-layer {
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(var(--cyber-grid-rgb), 0) 0%, rgba(var(--cyber-grid-rgb), 0.15) 46%, rgba(var(--cyber-grid-rgb), 0) 100%),
+    repeating-linear-gradient(180deg, rgba(var(--cyber-scan-rgb), 0.08) 0 2px, rgba(5, 16, 29, 0) 2px 6px);
+  background-size: 100% 240px, 100% 8px;
+  background-position: 0 -260px, 0 0;
+  mix-blend-mode: screen;
+  opacity: calc(0.55 * var(--cyber-fx-opacity, 1));
+  animation: tech-scan-move calc(11s * var(--cyber-fx-speed, 1)) linear infinite;
+}
+
+.tech-glow-layer {
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(var(--cyber-glow-a-rgb), 0.14) 0%, rgba(var(--cyber-glow-a-rgb), 0) 34%),
+    radial-gradient(circle at 78% 78%, rgba(var(--cyber-glow-c-rgb), 0.16) 0%, rgba(var(--cyber-glow-c-rgb), 0) 36%),
+    radial-gradient(circle at 54% 44%, rgba(var(--cyber-glow-b-rgb), 0.12) 0%, rgba(var(--cyber-glow-b-rgb), 0) 42%);
+  animation: tech-glow-pan calc(18s * var(--cyber-fx-speed, 1)) ease-in-out infinite;
+}
+
+.tech-node {
+  position: absolute;
+  z-index: 4;
+  border-radius: 999px;
+  pointer-events: none;
+  background: rgba(var(--cyber-node-rgb), 0.95);
+  box-shadow:
+    0 0 0 0 rgba(var(--cyber-beam-rgb), 0.48),
+    0 0 18px rgba(var(--cyber-beam-rgb), 0.7);
+  animation: tech-node-pulse calc(4.2s * var(--cyber-fx-speed, 1)) ease-out infinite;
+}
+
+.tech-beam {
+  position: absolute;
+  z-index: 5;
+  width: 30vmax;
+  height: 30vmax;
+  border-radius: 999px;
+  pointer-events: none;
+  filter: blur(18px);
+  mix-blend-mode: screen;
+  background: conic-gradient(from 160deg, rgba(var(--cyber-beam-rgb), 0) 0deg, rgba(var(--cyber-beam-rgb), 0.26) 36deg, rgba(var(--cyber-beam-rgb), 0) 96deg);
+}
+
+.cyber-pointer-glow {
+  position: absolute;
+  inset: -14%;
+  z-index: 6;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at var(--pointer-x) var(--pointer-y), rgba(var(--cyber-glow-a-rgb), 0.26) 0%, rgba(var(--cyber-glow-a-rgb), 0.07) 12%, rgba(var(--cyber-glow-a-rgb), 0) 30%),
+    radial-gradient(circle at calc(var(--pointer-x) + 6%) calc(var(--pointer-y) + 4%), rgba(var(--cyber-glow-b-rgb), 0.16) 0%, rgba(var(--cyber-glow-b-rgb), 0) 24%);
+  filter: blur(3px);
+  transform: scale(var(--cyber-pointer-scale, 1));
+  transition: opacity 300ms ease;
+}
+
+.cyber-noise-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  pointer-events: none;
+  opacity: calc(0.22 * var(--cyber-fx-opacity, 1));
+  mix-blend-mode: soft-light;
+  background-image: radial-gradient(circle, rgba(var(--cyber-node-rgb), 0.4) 0.7px, transparent 0.7px);
+  background-size: 3px 3px;
+  animation: cyber-noise-shift calc(0.55s * var(--cyber-fx-speed, 1)) steps(2) infinite;
+}
+
+.cyber-code-rain {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: calc(0.56 * var(--cyber-fx-opacity, 1));
+}
+
+.code-column {
+  position: absolute;
+  top: -30%;
+  width: 136px;
+  color: rgba(var(--cyber-code-rgb), 0.66);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  text-shadow:
+    0 0 8px rgba(var(--cyber-beam-rgb), 0.55),
+    0 0 20px rgba(var(--cyber-glow-a-rgb), 0.36);
+  animation: cyber-code-fall linear infinite;
+}
+
+.beam-a {
+  top: -32%;
+  left: -10%;
+  animation: tech-beam-drift-a calc(17s * var(--cyber-fx-speed, 1)) ease-in-out infinite;
+}
+
+.beam-b {
+  right: -14%;
+  bottom: -34%;
+  animation: tech-beam-drift-b calc(20s * var(--cyber-fx-speed, 1)) ease-in-out infinite;
+}
+
+.menu-bar {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.status-pill {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  padding: 2px 8px;
+  backdrop-filter: blur(8px);
+}
+
+.launcher-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: rgba(1, 6, 16, 0.38);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 14vh;
+}
+
+.launcher-panel {
+  width: min(680px, calc(100vw - 28px));
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.launcher-input {
+  width: 100%;
+  border: 0;
+  outline: none;
+  padding: 16px 18px;
+  background: rgba(255, 255, 255, 0.54);
+  color: rgb(17, 24, 39);
+  font-size: 15px;
+}
+
+.launcher-list {
+  max-height: 52vh;
+  overflow: auto;
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.launcher-quick-zones {
+  display: grid;
+  gap: 8px;
+  padding: 10px 10px 0;
+}
+
+.launcher-quick-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.launcher-quick-label {
+  font-size: 11px;
+  color: rgba(51, 65, 85, 0.9);
+  min-width: 28px;
+}
+
+.launcher-chip {
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  background: rgba(240, 249, 255, 0.75);
+  color: rgb(15, 23, 42);
+  border-radius: 999px;
+  font-size: 12px;
+  padding: 3px 10px;
+}
+
+.launcher-chip:hover {
+  background: rgba(224, 242, 254, 0.95);
+}
+
+.launcher-chip-muted {
+  border-color: rgba(148, 163, 184, 0.3);
+  background: rgba(248, 250, 252, 0.75);
+}
+
+.launcher-item {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.44);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  color: rgb(15, 23, 42);
+}
+
+.launcher-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pin-toggle {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.72);
+  color: rgba(100, 116, 139, 0.85);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.pin-toggle:hover {
+  border-color: rgba(250, 204, 21, 0.7);
+  color: rgba(161, 98, 7, 0.95);
+}
+
+.pin-toggle.is-pinned {
+  background: rgba(254, 240, 138, 0.62);
+  border-color: rgba(250, 204, 21, 0.85);
+  color: rgba(161, 98, 7, 0.98);
+}
+
+.launcher-item:hover,
+.launcher-item.is-active {
+  background: rgba(255, 255, 255, 0.74);
+  border-color: rgba(56, 189, 248, 0.55);
+}
+
+.launcher-status {
+  font-size: 11px;
+  border-radius: 999px;
+  padding: 2px 7px;
+}
+
+.status-online {
+  background: rgba(16, 185, 129, 0.2);
+  color: rgb(6, 95, 70);
+}
+
+.status-offline {
+  background: rgba(244, 63, 94, 0.2);
+  color: rgb(159, 18, 57);
+}
+
+.status-local {
+  background: rgba(100, 116, 139, 0.2);
+  color: rgb(51, 65, 85);
+}
+
+@keyframes wallpaper-drift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes tech-grid-shift {
+  0% {
+    background-position: 0 0, 0 0, center;
+  }
+  100% {
+    background-position: 104px 52px, 104px 52px, center;
+  }
+}
+
+@keyframes tech-scan-move {
+  0% {
+    background-position: 0 -260px, 0 0;
+  }
+  100% {
+    background-position: 0 120vh, 0 0;
+  }
+}
+
+@keyframes tech-node-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow:
+      0 0 0 0 rgba(var(--cyber-beam-rgb), 0.46),
+      0 0 18px rgba(var(--cyber-beam-rgb), 0.7);
+  }
+  60% {
+    transform: scale(1.3);
+    box-shadow:
+      0 0 0 12px rgba(var(--cyber-beam-rgb), 0),
+      0 0 28px rgba(var(--cyber-code-rgb), 0.95);
+  }
+}
+
+@keyframes tech-beam-drift-a {
+  0%,
+  100% {
+    transform: translate3d(-8%, -5%, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(14%, 12%, 0) rotate(18deg);
+  }
+}
+
+@keyframes tech-beam-drift-b {
+  0%,
+  100% {
+    transform: translate3d(6%, 4%, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(-15%, -10%, 0) rotate(-22deg);
+  }
+}
+
+@keyframes tech-glow-pan {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(0, -2%, 0) scale(1.03);
+  }
+}
+
+@keyframes cyber-code-fall {
+  0% {
+    transform: translate3d(0, -20%, 0);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.75;
+  }
+  85% {
+    opacity: 0.62;
+  }
+  100% {
+    transform: translate3d(0, 135vh, 0);
+    opacity: 0;
+  }
+}
+
+@keyframes cyber-noise-shift {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(-1px, 1px, 0);
+  }
+  100% {
+    transform: translate3d(1px, -1px, 0);
+  }
+}
+
+@media (max-width: 640px) {
+  .desktop-icons {
+    justify-items: center;
+  }
+
+  .tech-grid-layer {
+    background-size: 38px 38px, 38px 38px, 100% 100%;
+  }
+
+  .tech-beam {
+    width: 42vmax;
+    height: 42vmax;
+    opacity: 0.62;
+  }
+
+  .cyber-code-rain {
+    opacity: 0.36;
+  }
+
+  .code-column {
+    font-size: 8px;
+    width: 126px;
+  }
+
+  .cyber-pointer-glow {
+    display: none;
+  }
+}
+</style>
