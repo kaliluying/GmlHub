@@ -46,6 +46,7 @@ const props = defineProps({
 
 const store = useDesktopStore()
 const contextMenu = ref({ show: false, x: 0, y: 0 })
+let clickTimer = null
 
 const ICON_MENU_EVENT = 'desktop:icon-context-menu-open'
 const DESKTOP_MENU_EVENT = 'desktop:context-menu-open'
@@ -72,10 +73,23 @@ const iconClass = computed(() => {
 
 const handleClick = () => {
   closeContextMenu()
-  store.openWindow(props.app.id)
+  if (clickTimer) {
+    clearTimeout(clickTimer)
+    clickTimer = null
+  }
+
+  clickTimer = setTimeout(() => {
+    store.openWindow(props.app.id)
+    clickTimer = null
+  }, 220)
 }
 
 const handleDoubleClick = () => {
+  if (clickTimer) {
+    clearTimeout(clickTimer)
+    clickTimer = null
+  }
+
   closeContextMenu()
   store.openWindow(props.app.id)
 }
@@ -131,6 +145,11 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  if (clickTimer) {
+    clearTimeout(clickTimer)
+    clickTimer = null
+  }
+
   window.removeEventListener(ICON_MENU_EVENT, handleOpenSignal)
   window.removeEventListener(DESKTOP_MENU_EVENT, handleDesktopMenuOpen)
 })

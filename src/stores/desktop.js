@@ -136,13 +136,16 @@ export const useDesktopStore = defineStore('desktop', () => {
   const minimizedWindows = computed(() => windows.value.filter(w => w.minimized))
   const isDarkMode = computed(() => settings.value.darkMode)
   const serviceSummary = computed(() => {
-    const online = apps.value.filter(app => app.status === 'online').length
-    const offline = apps.value.filter(app => app.status === 'offline').length
+    const remoteApps = apps.value.filter(app => app.url)
+    const online = remoteApps.filter(app => app.status === 'online').length
+    const offline = remoteApps.filter(app => app.status === 'offline').length
+    const local = apps.value.filter(app => app.status === 'local').length
 
     return {
       online,
       offline,
-      total: apps.value.length,
+      local,
+      total: remoteApps.length,
     }
   })
 
@@ -374,16 +377,17 @@ export const useDesktopStore = defineStore('desktop', () => {
       return
     }
 
+    const frame = buildWindowFrame('trash', windows.value.length, { width: 820, height: 560 })
     const newWindow = {
       id: `window-${Date.now()}`,
       appId: 'trash',
       title: '废纸篓',
       icon: '🗑️',
       url: null,
-      x: 130 + (windows.value.length * 24),
-      y: 90 + (windows.value.length * 24),
-      width: 820,
-      height: 560,
+      x: frame.x,
+      y: frame.y,
+      width: frame.width,
+      height: frame.height,
       zIndex: ++maxZIndex.value,
       minimized: false,
       maximized: false,
@@ -461,7 +465,30 @@ export const useDesktopStore = defineStore('desktop', () => {
     return window.innerWidth < 768
   }
 
-  const buildWindowFrame = (appId, index) => {
+  const getCenteredWindowFrame = ({ width, height }) => {
+    if (typeof window === 'undefined') return null
+
+    const horizontalPadding = 20
+    const topOffset = 56
+    const bottomOffset = settings.value.showDock ? 96 : 20
+    const availableWidth = Math.max(320, window.innerWidth - horizontalPadding * 2)
+    const availableHeight = Math.max(320, window.innerHeight - topOffset - bottomOffset)
+    const safeWidth = Math.min(width, availableWidth)
+    const safeHeight = Math.min(height, availableHeight)
+    const centeredX = Math.round((window.innerWidth - safeWidth) / 2)
+    const centeredY = Math.round((window.innerHeight - safeHeight) / 2)
+    const maxX = window.innerWidth - safeWidth - horizontalPadding
+    const maxY = window.innerHeight - safeHeight - bottomOffset
+
+    return {
+      x: Math.max(horizontalPadding, Math.min(centeredX, maxX)),
+      y: Math.max(topOffset, Math.min(centeredY, maxY)),
+      width: safeWidth,
+      height: safeHeight,
+    }
+  }
+
+  const buildWindowFrame = (appId, index, size = { width: 900, height: 600 }) => {
     if (typeof window !== 'undefined' && isCompactMobileViewport() && (appId === 'terminal' || appId === 'settings')) {
       const horizontalPadding = 8
       const topOffset = 48
@@ -477,11 +504,14 @@ export const useDesktopStore = defineStore('desktop', () => {
       }
     }
 
+    const centeredFrame = getCenteredWindowFrame(size)
+    if (centeredFrame) return centeredFrame
+
     return {
       x: 100 + (index * 30),
       y: 100 + (index * 30),
-      width: 900,
-      height: 600,
+      width: size.width,
+      height: size.height,
     }
   }
 

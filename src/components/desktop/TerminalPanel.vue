@@ -453,18 +453,20 @@ const handleStatus = async (target) => {
 }
 
 const handleTheme = async (nextTheme) => {
-  if (!nextTheme) {
+  const normalizedTheme = (nextTheme || '').trim().toLowerCase()
+
+  if (!normalizedTheme) {
     await pushLine('info', `当前主题: ${theme.value}`)
     return
   }
 
-  if (nextTheme !== 'cyber' && nextTheme !== 'clean') {
+  if (normalizedTheme !== 'cyber' && normalizedTheme !== 'clean') {
     await pushLine('error', '可用主题: cyber, clean')
     return
   }
 
-  theme.value = nextTheme
-  await pushLine('success', `主题已切换为 ${nextTheme}`)
+  theme.value = normalizedTheme
+  await pushLine('success', `主题已切换为 ${normalizedTheme}`)
 }
 
 const handlePwd = async () => {
@@ -1043,7 +1045,7 @@ const executeCommand = async (rawInput) => {
   const inputCommand = cmd.toLowerCase()
   const commandName = commandAliases[inputCommand] || inputCommand
   const rawTarget = args.join(' ')
-  const target = rawTarget.toLowerCase()
+  const normalizedTarget = rawTarget.trim().toLowerCase()
 
   const dangerousRootRm = commandName === 'rm' && isRootDangerousRmAttempt(rawTarget)
   if (dangerousRootRm) {
@@ -1058,17 +1060,17 @@ const executeCommand = async (rawInput) => {
   }
 
   if (commandName === 'open') {
-    await handleOpen(target)
+    await handleOpen(rawTarget)
     return
   }
 
   if (commandName === 'status') {
-    await handleStatus(target)
+    await handleStatus(rawTarget)
     return
   }
 
   if (commandName === 'theme') {
-    await handleTheme(target)
+    await handleTheme(rawTarget)
     return
   }
 
@@ -1083,12 +1085,12 @@ const executeCommand = async (rawInput) => {
   }
 
   if (commandName === 'cd') {
-    await handleCd(target)
+    await handleCd(rawTarget)
     return
   }
 
   if (commandName === 'cat') {
-    await handleCat(target)
+    await handleCat(rawTarget)
     return
   }
 
@@ -1113,7 +1115,7 @@ const executeCommand = async (rawInput) => {
   }
 
   if (commandName === 'ip') {
-    if (target && target !== 'a' && target !== 'addr' && target !== 'address') {
+    if (normalizedTarget && normalizedTarget !== 'a' && normalizedTarget !== 'addr' && normalizedTarget !== 'address') {
       await pushLine('error', '用法: ip [a|addr]')
       return
     }
@@ -1132,7 +1134,7 @@ const executeCommand = async (rawInput) => {
   }
 
   if (commandName === 'curl') {
-    await handleCurl(rawTarget || target)
+    await handleCurl(rawTarget)
     return
   }
 

@@ -24,7 +24,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 
 const props = defineProps({
   show: {
@@ -57,6 +57,7 @@ const emit = defineEmits(['select', 'close'])
 
 const menuRef = ref(null)
 const position = ref({ x: 0, y: 0 })
+let listenersAttached = false
 
 const menuStyle = computed(() => ({
   left: `${position.value.x}px`,
@@ -106,12 +107,34 @@ const select = (key) => {
   emit('close')
 }
 
+const addGlobalListeners = () => {
+  if (listenersAttached) return
+  document.addEventListener('click', handleOutsideClick, true)
+  document.addEventListener('contextmenu', handleOutsideContextMenu, true)
+  window.addEventListener('keydown', handleEscape)
+  listenersAttached = true
+}
+
+const removeGlobalListeners = () => {
+  if (!listenersAttached) return
+  document.removeEventListener('click', handleOutsideClick, true)
+  document.removeEventListener('contextmenu', handleOutsideContextMenu, true)
+  window.removeEventListener('keydown', handleEscape)
+  listenersAttached = false
+}
+
 watch(
   () => props.show,
   (show) => {
-    if (!show) return
+    if (!show) {
+      removeGlobalListeners()
+      return
+    }
+
+    addGlobalListeners()
     updatePosition()
   },
+  { immediate: true },
 )
 
 watch(
@@ -122,16 +145,8 @@ watch(
   },
 )
 
-onMounted(() => {
-  document.addEventListener('click', handleOutsideClick, true)
-  document.addEventListener('contextmenu', handleOutsideContextMenu, true)
-  window.addEventListener('keydown', handleEscape)
-})
-
 onUnmounted(() => {
-  document.removeEventListener('click', handleOutsideClick, true)
-  document.removeEventListener('contextmenu', handleOutsideContextMenu, true)
-  window.removeEventListener('keydown', handleEscape)
+  removeGlobalListeners()
 })
 </script>
 

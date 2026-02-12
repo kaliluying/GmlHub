@@ -6,6 +6,32 @@
     @mousemove="handlePointerMove"
     @mouseleave="resetPointer"
   >
+    <transition name="boot-fade">
+      <div v-if="showBootSequence" class="boot-sequence">
+        <div class="boot-scan-layer" />
+        <div class="boot-noise-layer" />
+        <span
+          v-for="particle in bootParticles"
+          :key="particle.id"
+          class="boot-particle"
+          :style="bootParticleStyle(particle)"
+        />
+        <div class="boot-core">
+          <div class="boot-orbit">
+            <div class="boot-orbit-ring" />
+            <div class="boot-logo">Personal OS</div>
+          </div>
+          <div class="boot-subtitle">智能工作台正在唤醒</div>
+          <div class="boot-progress-track">
+            <div class="boot-progress-fill" :style="{ width: `${bootProgress}%` }" />
+          </div>
+          <transition name="boot-status" mode="out-in">
+            <div :key="bootStatusText" class="boot-progress-text">{{ bootStatusText }}</div>
+          </transition>
+        </div>
+      </div>
+    </transition>
+
     <!-- 壁纸层 -->
     <div class="absolute inset-0 z-0" :style="wallpaperStyle" />
     <div class="tech-grid-layer absolute inset-0 z-[1]" />
@@ -233,9 +259,14 @@ const launcherInput = ref(null)
 const launcher = ref({ open: false, query: '', selectedIndex: 0 })
 const prefersReducedMotion = ref(false)
 const isPageVisible = ref(true)
+const showBootSequence = ref(false)
+const bootProgress = ref(0)
 const DESKTOP_MENU_EVENT = 'desktop:context-menu-open'
 const ICON_MENU_EVENT = 'desktop:icon-context-menu-open'
+const BOOT_SEEN_STORAGE_KEY = 'desktop.bootSeen'
 let reducedMotionMedia = null
+let bootProgressTimer = null
+let bootFinishTimer = null
 
 const wallpaperPresets = [
   {
@@ -313,6 +344,15 @@ const codeColumns = [
   { id: 'c9', left: '76%', delay: '2.9s', duration: '16.2s', text: 'NEURAL NET > route.trace.enabled' },
   { id: 'c10', left: '85%', delay: '1.4s', duration: '17.6s', text: '001101 111000 010101 100111' },
   { id: 'c11', left: '93%', delay: '3.3s', duration: '19.2s', text: 'EDGE LINK // heartbeat stable' },
+]
+
+const bootParticles = [
+  { id: 'bp1', top: '16%', left: '12%', size: 8, delay: '0s', duration: '3.4s' },
+  { id: 'bp2', top: '26%', left: '82%', size: 6, delay: '0.8s', duration: '4.2s' },
+  { id: 'bp3', top: '38%', left: '22%', size: 10, delay: '1.2s', duration: '3.8s' },
+  { id: 'bp4', top: '52%', left: '74%', size: 7, delay: '0.4s', duration: '4.1s' },
+  { id: 'bp5', top: '66%', left: '15%', size: 9, delay: '1.6s', duration: '3.5s' },
+  { id: 'bp6', top: '72%', left: '88%', size: 6, delay: '2s', duration: '4.4s' },
 ]
 
 const defaultPresetId = wallpaperPresets[0].id
@@ -429,7 +469,78 @@ const motionLevelLabel = computed(() => {
   return names[store.settings.motionLevel] || '中'
 })
 
+const bootStatusText = computed(() => {
+  if (bootProgress.value < 35) return '连接核心模块中...'
+  if (bootProgress.value < 70) return '载入桌面组件中...'
+  if (bootProgress.value < 95) return '同步工作区状态...'
+  return '准备就绪'
+})
+
 let timeInterval = null
+
+const clearBootProgressTimer = () => {
+  if (!bootProgressTimer) return
+  clearInterval(bootProgressTimer)
+  bootProgressTimer = null
+}
+
+const clearBootFinishTimer = () => {
+  if (!bootFinishTimer) return
+  clearTimeout(bootFinishTimer)
+  bootFinishTimer = null
+}
+
+const clearBootSequenceTimers = () => {
+  clearBootProgressTimer()
+  clearBootFinishTimer()
+}
+
+const hasSeenBootSequence = () => {
+  if (typeof window === 'undefined') return true
+
+  try {
+    return window.localStorage.getItem(BOOT_SEEN_STORAGE_KEY) === '1'
+  } catch (error) {
+    console.warn('读取开机动画状态失败', error)
+    return false
+  }
+}
+
+const markBootSequenceSeen = () => {
+  if (typeof window === 'undefined') return
+
+  try {
+    window.localStorage.setItem(BOOT_SEEN_STORAGE_KEY, '1')
+  } catch (error) {
+    console.warn('保存开机动画状态失败', error)
+  }
+}
+
+const startBootSequence = () => {
+  clearBootSequenceTimers()
+
+  const reducedMotion = typeof window !== 'undefined'
+    && window.matchMedia
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+  const duration = reducedMotion ? 450 : 1900
+  const stepMs = 60
+  const step = Math.max(1, Math.ceil((100 * stepMs) / duration))
+
+  showBootSequence.value = true
+  bootProgress.value = 0
+
+  bootProgressTimer = setInterval(() => {
+    bootProgress.value = Math.min(100, bootProgress.value + step)
+    if (bootProgress.value >= 100) clearBootProgressTimer()
+  }, stepMs)
+
+  bootFinishTimer = setTimeout(() => {
+    showBootSequence.value = false
+    markBootSequenceSeen()
+    clearBootFinishTimer()
+  }, duration + 140)
+}
 
 const updateTime = () => {
   const now = new Date()
@@ -441,6 +552,13 @@ const updateTime = () => {
 }
 
 onMounted(() => {
+  if (!hasSeenBootSequence()) {
+    startBootSequence()
+  } else {
+    showBootSequence.value = false
+    bootProgress.value = 100
+  }
+
   store.loadPortalState()
   if (!wallpaperPresets.some(item => item.id === store.settings.wallpaper)) {
     store.setWallpaper(defaultPresetId)
@@ -482,6 +600,7 @@ watch(
 
 onUnmounted(() => {
   if (timeInterval) clearInterval(timeInterval)
+  clearBootSequenceTimers()
   store.stopStatusMonitoring()
 
   if (reducedMotionMedia) {
@@ -562,6 +681,15 @@ const codeColumnStyle = (column) => ({
   left: column.left,
   animationDelay: column.delay,
   animationDuration: column.duration,
+})
+
+const bootParticleStyle = (particle) => ({
+  top: particle.top,
+  left: particle.left,
+  width: `${particle.size}px`,
+  height: `${particle.size}px`,
+  animationDelay: particle.delay,
+  animationDuration: particle.duration,
 })
 
 const handlePointerMove = (event) => {
@@ -652,7 +780,8 @@ const togglePinned = (appId) => {
 const statusText = (status) => {
   if (status === 'online') return '在线'
   if (status === 'offline') return '离线'
-  return '在线'
+  if (status === 'local') return '本地'
+  return '未知'
 }
 
 const showContextMenu = (e) => {
@@ -702,6 +831,223 @@ const changeWallpaper = () => {
 <style scoped>
 .desktop {
   user-select: none;
+}
+
+.boot-sequence {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-boot-sequence, 220);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  pointer-events: all;
+  background:
+    radial-gradient(circle at 14% 16%, rgba(56, 189, 248, 0.22) 0%, rgba(56, 189, 248, 0) 34%),
+    radial-gradient(circle at 80% 78%, rgba(14, 165, 233, 0.18) 0%, rgba(14, 165, 233, 0) 38%),
+    linear-gradient(148deg, rgba(2, 8, 20, 0.98) 0%, rgba(6, 20, 43, 0.96) 48%, rgba(2, 12, 28, 0.98) 100%);
+  backdrop-filter: blur(6px);
+}
+
+.boot-scan-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(56, 189, 248, 0) 0%, rgba(56, 189, 248, 0.18) 48%, rgba(56, 189, 248, 0) 100%),
+    repeating-linear-gradient(180deg, rgba(148, 163, 184, 0.06) 0 2px, rgba(2, 12, 28, 0) 2px 6px);
+  background-size: 100% 240px, 100% 8px;
+  background-position: 0 -260px, 0 0;
+  opacity: 0.55;
+  mix-blend-mode: screen;
+  animation: boot-scan-shift 7.6s linear infinite;
+}
+
+.boot-noise-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.2;
+  mix-blend-mode: soft-light;
+  background-image: radial-gradient(circle, rgba(186, 230, 253, 0.48) 0.7px, transparent 0.7px);
+  background-size: 3px 3px;
+  animation: boot-noise-shift 0.6s steps(2) infinite;
+}
+
+.boot-particle {
+  position: absolute;
+  z-index: 2;
+  border-radius: 999px;
+  pointer-events: none;
+  background: rgba(186, 230, 253, 0.92);
+  box-shadow:
+    0 0 0 0 rgba(56, 189, 248, 0.42),
+    0 0 12px rgba(56, 189, 248, 0.75);
+  animation: boot-particle-pulse ease-in-out infinite;
+}
+
+.boot-core {
+  position: relative;
+  z-index: 3;
+  width: min(460px, calc(100vw - 38px));
+  padding: 22px 20px 18px;
+  display: grid;
+  justify-items: center;
+  border: 1px solid rgba(125, 211, 252, 0.36);
+  border-radius: 18px;
+  background: linear-gradient(170deg, rgba(3, 15, 33, 0.74) 0%, rgba(5, 20, 43, 0.68) 100%);
+  box-shadow:
+    0 18px 42px rgba(2, 8, 23, 0.58),
+    inset 0 1px 0 rgba(186, 230, 253, 0.16);
+  animation: boot-core-enter 520ms ease-out;
+}
+
+.boot-orbit {
+  position: relative;
+  width: 118px;
+  height: 118px;
+  margin-bottom: 10px;
+}
+
+.boot-orbit-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(125, 211, 252, 0.5);
+  box-shadow: 0 0 32px rgba(56, 189, 248, 0.26);
+  animation: boot-orbit-pulse 1.9s ease-in-out infinite;
+}
+
+.boot-logo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-align: center;
+  white-space: nowrap;
+  color: rgba(224, 242, 254, 0.96);
+  line-height: 1;
+  text-shadow: 0 0 18px rgba(56, 189, 248, 0.46);
+}
+
+.boot-subtitle {
+  margin-bottom: 16px;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  color: rgba(191, 219, 254, 0.75);
+}
+
+.boot-progress-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.56);
+  border: 1px solid rgba(125, 211, 252, 0.26);
+  overflow: hidden;
+}
+
+.boot-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(34, 211, 238, 0.95) 0%, rgba(56, 189, 248, 0.98) 52%, rgba(14, 165, 233, 0.95) 100%);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.42);
+  transition: width 120ms linear;
+}
+
+.boot-progress-text {
+  margin-top: 10px;
+  min-height: 18px;
+  font-size: 11px;
+  color: rgba(186, 230, 253, 0.92);
+  letter-spacing: 0.06em;
+  transition: opacity 200ms ease;
+}
+
+.boot-fade-enter-active,
+.boot-fade-leave-active {
+  transition: opacity 280ms ease;
+}
+
+.boot-fade-enter-from,
+.boot-fade-leave-to {
+  opacity: 0;
+}
+
+.boot-status-enter-active,
+.boot-status-leave-active {
+  transition: opacity 180ms ease;
+}
+
+.boot-status-enter-from,
+.boot-status-leave-to {
+  opacity: 0;
+}
+
+@keyframes boot-core-enter {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes boot-orbit-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.72;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+}
+
+@keyframes boot-scan-shift {
+  0% {
+    background-position: 0 -260px, 0 0;
+  }
+  100% {
+    background-position: 0 120vh, 0 0;
+  }
+}
+
+@keyframes boot-noise-shift {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(-1px, 1px, 0);
+  }
+  100% {
+    transform: translate3d(1px, -1px, 0);
+  }
+}
+
+@keyframes boot-particle-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.7;
+    box-shadow:
+      0 0 0 0 rgba(56, 189, 248, 0.42),
+      0 0 12px rgba(56, 189, 248, 0.72);
+  }
+  55% {
+    transform: scale(1.28);
+    opacity: 1;
+    box-shadow:
+      0 0 0 10px rgba(56, 189, 248, 0),
+      0 0 20px rgba(125, 211, 252, 0.88);
+  }
 }
 
 .desktop-main-grid {
@@ -934,7 +1280,7 @@ const changeWallpaper = () => {
 .launcher-overlay {
   position: fixed;
   inset: 0;
-  z-index: 70;
+  z-index: var(--z-launcher-overlay, 70);
   background: rgba(1, 6, 16, 0.38);
   backdrop-filter: blur(8px);
   display: flex;
@@ -1177,6 +1523,14 @@ const changeWallpaper = () => {
 }
 
 @media (max-width: 640px) {
+  .boot-core {
+    width: min(390px, calc(100vw - 28px));
+  }
+
+  .boot-particle {
+    display: none;
+  }
+
   .desktop-icons {
     justify-items: center;
   }
