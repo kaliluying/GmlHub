@@ -115,7 +115,6 @@ export const useDesktopStore = defineStore('desktop', () => {
 
   // 桌面设置
   const settings = ref({
-    darkMode: false,
     wallpaper: 'deep-net',
     wallpaperColor: '#1a1a2e',
     showDock: true,
@@ -134,7 +133,6 @@ export const useDesktopStore = defineStore('desktop', () => {
   // 计算属性
   const openWindows = computed(() => windows.value.filter(w => !w.minimized))
   const minimizedWindows = computed(() => windows.value.filter(w => w.minimized))
-  const isDarkMode = computed(() => settings.value.darkMode)
   const serviceSummary = computed(() => {
     const remoteApps = apps.value.filter(app => app.url)
     const online = remoteApps.filter(app => app.status === 'online').length
@@ -226,7 +224,6 @@ export const useDesktopStore = defineStore('desktop', () => {
     if (typeof window === 'undefined') return
 
     const defaults = {
-      darkMode: false,
       wallpaper: 'deep-net',
       wallpaperColor: '#1a1a2e',
       showDock: true,
@@ -264,7 +261,6 @@ export const useDesktopStore = defineStore('desktop', () => {
       }
 
       settings.value = {
-        darkMode: typeof parsed.darkMode === 'boolean' ? parsed.darkMode : defaults.darkMode,
         wallpaper: typeof parsed.wallpaper === 'string' ? parsed.wallpaper : defaults.wallpaper,
         wallpaperColor: typeof parsed.wallpaperColor === 'string' ? parsed.wallpaperColor : defaults.wallpaperColor,
         showDock: typeof parsed.showDock === 'boolean' ? parsed.showDock : defaults.showDock,
@@ -634,16 +630,6 @@ export const useDesktopStore = defineStore('desktop', () => {
     }
   }
 
-  const toggleDarkMode = () => {
-    settings.value.darkMode = !settings.value.darkMode
-    saveSettings()
-  }
-
-  const setDarkMode = (enabled) => {
-    settings.value.darkMode = Boolean(enabled)
-    saveSettings()
-  }
-
   const setShowDock = (enabled) => {
     settings.value.showDock = Boolean(enabled)
     saveSettings()
@@ -725,7 +711,6 @@ export const useDesktopStore = defineStore('desktop', () => {
 
   const resetSettings = () => {
     settings.value = {
-      darkMode: false,
       wallpaper: 'deep-net',
       wallpaperColor: '#1a1a2e',
       showDock: true,
@@ -755,7 +740,6 @@ export const useDesktopStore = defineStore('desktop', () => {
     settings,
     openWindows,
     minimizedWindows,
-    isDarkMode,
     serviceSummary,
     pinnedAppIds,
     recentAppIds,
@@ -775,8 +759,6 @@ export const useDesktopStore = defineStore('desktop', () => {
     bringToFront,
     updateWindowPosition,
     updateWindowSize,
-    toggleDarkMode,
-    setDarkMode,
     setShowDock,
     setIconSize,
     setDockPosition,

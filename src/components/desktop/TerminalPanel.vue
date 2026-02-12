@@ -305,7 +305,7 @@ const handleTabComplete = async () => {
   const currentArg = parts.slice(1).join(' ').toLowerCase()
 
   if (commandName === 'theme') {
-    const themeCandidates = ['cyber', 'clean']
+    const themeCandidates = ['cyber']
     const matches = themeCandidates.filter(item => item.startsWith(currentArg))
     if (!matches.length) return
     const next = matches.length === 1 ? matches[0] : getCommonPrefix(matches)
@@ -390,7 +390,7 @@ const handleHelp = async () => {
   await pushLine('info', 'rm [-rf] <path>       删除文件/目录（会话内）')
   await pushLine('info', 'history / echo        历史与输出')
   await pushLine('info', 'exit                  关闭当前终端窗口')
-  await pushLine('info', 'theme [cyber|clean]   切换终端主题')
+  await pushLine('info', 'theme [cyber]         切换终端主题')
   await pushLine('info', 'clear                 清空终端输出')
 }
 
@@ -460,8 +460,8 @@ const handleTheme = async (nextTheme) => {
     return
   }
 
-  if (normalizedTheme !== 'cyber' && normalizedTheme !== 'clean') {
-    await pushLine('error', '可用主题: cyber, clean')
+  if (normalizedTheme !== 'cyber') {
+    await pushLine('error', '可用主题: cyber')
     return
   }
 
@@ -1371,12 +1371,6 @@ onUnmounted(() => {
   background: linear-gradient(180deg, rgba(2, 6, 23, 0.95) 0%, rgba(3, 13, 31, 0.95) 100%);
   color: rgb(186 230 253);
   border-top: 1px solid rgba(56, 189, 248, 0.2);
-}
-
-.theme-clean {
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.92) 100%);
-  color: rgb(226 232 240);
-  border-top: 1px solid rgba(148, 163, 184, 0.24);
 }
 
 @media (max-width: 767px) {

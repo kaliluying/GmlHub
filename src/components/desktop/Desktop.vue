@@ -66,8 +66,8 @@
     <!-- 顶部菜单栏 -->
     <div class="menu-bar h-10 flex items-center justify-between px-3 md:px-5 glass fixed top-0 left-0 right-0 z-40">
       <div class="flex items-center gap-2 md:gap-4">
-        <span class="font-bold text-gray-800 text-base">🍎</span>
-        <span class="font-semibold text-gray-800 tracking-wide">个人OS</span>
+        <span class="font-bold text-slate-100 text-base">🍎</span>
+        <span class="font-semibold text-slate-100 tracking-wide">个人OS</span>
       </div>
       <div class="relative flex items-center gap-2 md:gap-4">
         <div class="hidden lg:block">
@@ -126,7 +126,7 @@
           </div>
         </div>
         <button
-          class="h-7 rounded-full px-3 bg-white/50 text-xs text-gray-700 hover:text-gray-900 hover:bg-white/70 transition"
+          class="h-7 rounded-full px-3 bg-white/14 text-xs text-slate-100 hover:text-white hover:bg-white/24 transition"
           @click="changeWallpaper"
         >
           换风格
@@ -137,7 +137,7 @@
         >
           Ctrl+K
         </button>
-        <span class="text-sm font-medium text-gray-800 min-w-[46px] text-right">{{ currentTime }}</span>
+        <span class="text-sm font-medium text-slate-100 min-w-[46px] text-right">{{ currentTime }}</span>
       </div>
     </div>
 
@@ -190,7 +190,7 @@
             <span class="text-lg">{{ app.icon }}</span>
             <span class="flex flex-col items-start min-w-0">
               <span class="font-medium truncate max-w-full">{{ app.name }}</span>
-              <span class="text-xs text-slate-500 dark:text-slate-300 truncate max-w-full">{{ app.domain || app.description }}</span>
+                <span class="text-xs text-slate-300 truncate max-w-full">{{ app.domain || app.description }}</span>
             </span>
             <span class="launcher-actions">
               <button
@@ -203,7 +203,7 @@
               <span class="launcher-status" :class="`status-${app.status || 'local'}`">{{ statusText(app.status) }}</span>
             </span>
           </button>
-          <div v-if="!launcherApps.length" class="px-4 py-6 text-center text-sm text-slate-500">
+          <div v-if="!launcherApps.length" class="px-4 py-6 text-center text-sm text-slate-300">
             没找到匹配应用
           </div>
         </div>
@@ -687,15 +687,6 @@ const handleVisibilityChange = () => {
   if (typeof document === 'undefined') return
   isPageVisible.value = document.visibilityState !== 'hidden'
 }
-
-watch(
-  () => store.settings.darkMode,
-  (enabled) => {
-    if (typeof document === 'undefined') return
-    document.documentElement.classList.toggle('dark', enabled)
-  },
-  { immediate: true },
-)
 
 const desktopStyle = computed(() => ({
   background: activePreset.value.background,
@@ -1465,8 +1456,8 @@ const changeWallpaper = () => {
   position: fixed;
   inset: 0;
   z-index: var(--z-launcher-overlay, 70);
-  background: rgba(1, 6, 16, 0.38);
-  backdrop-filter: blur(8px);
+  background: rgba(1, 6, 16, 0.58);
+  backdrop-filter: blur(10px) saturate(120%);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -1477,6 +1468,8 @@ const changeWallpaper = () => {
   width: min(680px, calc(100vw - 28px));
   border-radius: 18px;
   overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  box-shadow: 0 20px 60px rgba(2, 6, 23, 0.62);
 }
 
 .launcher-input {
@@ -1484,9 +1477,13 @@ const changeWallpaper = () => {
   border: 0;
   outline: none;
   padding: 16px 18px;
-  background: rgba(255, 255, 255, 0.54);
-  color: rgb(17, 24, 39);
+  background: rgba(2, 6, 23, 0.82);
+  color: rgb(226, 232, 240);
   font-size: 15px;
+}
+
+.launcher-input::placeholder {
+  color: rgba(148, 163, 184, 0.9);
 }
 
 .launcher-list {
@@ -1512,32 +1509,33 @@ const changeWallpaper = () => {
 
 .launcher-quick-label {
   font-size: 11px;
-  color: rgba(51, 65, 85, 0.9);
+  color: rgba(148, 163, 184, 0.9);
   min-width: 28px;
 }
 
 .launcher-chip {
   border: 1px solid rgba(56, 189, 248, 0.35);
-  background: rgba(240, 249, 255, 0.75);
-  color: rgb(15, 23, 42);
+  background: rgba(14, 116, 144, 0.32);
+  color: rgb(224, 242, 254);
   border-radius: 999px;
   font-size: 12px;
   padding: 3px 10px;
 }
 
 .launcher-chip:hover {
-  background: rgba(224, 242, 254, 0.95);
+  background: rgba(14, 116, 144, 0.5);
 }
 
 .launcher-chip-muted {
   border-color: rgba(148, 163, 184, 0.3);
-  background: rgba(248, 250, 252, 0.75);
+  background: rgba(30, 41, 59, 0.66);
+  color: rgb(226, 232, 240);
 }
 
 .launcher-item {
   width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  background: rgba(255, 255, 255, 0.44);
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(15, 23, 42, 0.74);
   border-radius: 12px;
   padding: 10px 12px;
   display: grid;
@@ -1545,7 +1543,7 @@ const changeWallpaper = () => {
   align-items: center;
   gap: 10px;
   text-align: left;
-  color: rgb(15, 23, 42);
+  color: rgb(226, 232, 240);
 }
 
 .launcher-actions {
@@ -1559,8 +1557,8 @@ const changeWallpaper = () => {
   height: 22px;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.35);
-  background: rgba(255, 255, 255, 0.72);
-  color: rgba(100, 116, 139, 0.85);
+  background: rgba(30, 41, 59, 0.82);
+  color: rgba(148, 163, 184, 0.95);
   font-size: 12px;
   line-height: 1;
 }
@@ -1578,7 +1576,7 @@ const changeWallpaper = () => {
 
 .launcher-item:hover,
 .launcher-item.is-active {
-  background: rgba(255, 255, 255, 0.74);
+  background: rgba(15, 23, 42, 0.9);
   border-color: rgba(56, 189, 248, 0.55);
 }
 
@@ -1590,17 +1588,17 @@ const changeWallpaper = () => {
 
 .status-online {
   background: rgba(16, 185, 129, 0.2);
-  color: rgb(6, 95, 70);
+  color: rgb(167, 243, 208);
 }
 
 .status-offline {
   background: rgba(244, 63, 94, 0.2);
-  color: rgb(159, 18, 57);
+  color: rgb(254, 205, 211);
 }
 
 .status-local {
   background: rgba(100, 116, 139, 0.2);
-  color: rgb(51, 65, 85);
+  color: rgb(203, 213, 225);
 }
 
 @keyframes wallpaper-drift {

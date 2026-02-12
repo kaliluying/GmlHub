@@ -1,10 +1,10 @@
 <template>
-  <div class="trash-panel h-full overflow-auto p-5 md:p-6 text-slate-800 dark:text-slate-100">
+<div class="trash-panel h-full overflow-auto p-5 md:p-6 text-slate-100">
     <div class="mx-auto max-w-3xl">
       <div class="trash-head">
         <div>
           <h2 class="text-lg font-semibold">废纸篓</h2>
-          <p class="text-xs text-slate-500 dark:text-slate-300">这里是已移除的桌面快捷方式</p>
+    <p class="text-xs text-slate-300">这里是已移除的桌面快捷方式</p>
         </div>
         <button class="trash-btn danger" :disabled="!store.trashCount" @click="store.emptyTrash()">清空废纸篓</button>
       </div>
@@ -20,7 +20,7 @@
             <div class="trash-icon" :style="{ backgroundColor: app.color }">{{ app.icon }}</div>
             <div>
               <p class="font-semibold">{{ app.name }}</p>
-              <p class="text-xs text-slate-500 dark:text-slate-300">{{ app.description }}</p>
+            <p class="text-xs text-slate-300">{{ app.description }}</p>
             </div>
           </div>
 
@@ -66,8 +66,8 @@ const store = useDesktopStore()
 
 .trash-item {
   border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(30, 41, 59, 0.45);
   padding: 10px;
   display: flex;
   align-items: center;
@@ -101,7 +101,8 @@ const store = useDesktopStore()
 .trash-btn {
   border-radius: 9px;
   border: 1px solid rgba(148, 163, 184, 0.3);
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(15, 23, 42, 0.58);
+  color: rgb(226 232 240);
   padding: 6px 10px;
   font-size: 12px;
   font-weight: 600;
@@ -117,20 +118,6 @@ const store = useDesktopStore()
 }
 
 .trash-btn.danger {
-  color: rgb(190 18 60);
-}
-
-.dark .trash-item {
-  background: rgba(30, 41, 59, 0.45);
-  border-color: rgba(148, 163, 184, 0.22);
-}
-
-.dark .trash-btn {
-  background: rgba(15, 23, 42, 0.58);
-  color: rgb(226 232 240);
-}
-
-.dark .trash-btn.danger {
   color: rgb(254 205 211);
 }
 </style>

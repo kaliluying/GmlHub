@@ -15,7 +15,7 @@
         @click="handleAppClick(app.id)"
       >
         <div
-          class="dock-icon rounded-xl flex items-center justify-center cursor-pointer border border-white/35 dark:border-white/15"
+          class="dock-icon rounded-xl flex items-center justify-center cursor-pointer border border-white/15"
           :class="dockIconClass"
           :style="{ backgroundColor: app.color, ...getIconShellStyle(index) }"
         >
@@ -24,7 +24,7 @@
 
         <div
           v-if="isAppOpen(app.id)"
-          class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-gray-800/90 dark:bg-gray-100"
+            class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-gray-100"
         />
 
         <div class="tooltip absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1 rounded-lg bg-gray-900/85 text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
@@ -32,14 +32,14 @@
         </div>
       </div>
 
-      <div class="w-px h-8 sm:h-10 bg-white/35 dark:bg-white/20 mx-1.5 sm:mx-2" />
+      <div class="w-px h-8 sm:h-10 bg-white/20 mx-1.5 sm:mx-2" />
 
       <div
         class="dock-item relative group"
         :ref="el => setIconRef(el, trashIndex)"
         @click="showTrash"
       >
-        <div class="dock-icon rounded-xl flex items-center justify-center bg-white/35 dark:bg-white/10 border border-white/35 dark:border-white/15 cursor-pointer" :class="dockIconClass" :style="getIconShellStyle(trashIndex)">
+      <div class="dock-icon rounded-xl flex items-center justify-center bg-white/10 border border-white/15 cursor-pointer" :class="dockIconClass" :style="getIconShellStyle(trashIndex)">
           <span :style="getIconStyle(trashIndex)">🗑️</span>
         </div>
         <div class="tooltip absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1 rounded-lg bg-gray-900/85 text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">

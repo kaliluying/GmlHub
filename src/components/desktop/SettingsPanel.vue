@@ -1,5 +1,5 @@
 <template>
-  <div class="settings-panel h-full w-full overflow-auto text-slate-800 dark:text-slate-100">
+<div class="settings-panel h-full w-full overflow-auto text-slate-100">
     <div class="settings-shell">
       <section class="settings-card lg:col-span-12">
         <h2 class="text-lg font-semibold">系统信息</h2>
@@ -40,21 +40,12 @@
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 class="text-lg font-semibold">外观</h2>
-            <p class="text-xs text-slate-500 dark:text-slate-300">主题、图标和 Dock 显示</p>
+            <p class="text-xs text-slate-300">深色主题、图标和 Dock 显示</p>
           </div>
           <button class="settings-btn" @click="store.resetSettings()">恢复默认</button>
         </div>
 
-        <div class="mt-4 grid gap-3 sm:grid-cols-2">
-          <button
-            class="toggle-row"
-            :class="{ active: store.settings.darkMode }"
-            @click="store.setDarkMode(!store.settings.darkMode)"
-          >
-            <span class="toggle-label">深色模式</span>
-            <span class="toggle-value">{{ store.settings.darkMode ? '开' : '关' }}</span>
-          </button>
-
+        <div class="mt-4 grid gap-3">
           <button
             class="toggle-row"
             :class="{ active: store.settings.showDock }"
@@ -66,8 +57,8 @@
         </div>
 
         <div class="mt-5">
-          <p class="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-500/90 dark:text-slate-300/90">图标尺寸</p>
-          <div class="inline-flex rounded-xl bg-slate-900/5 p-1 dark:bg-white/10">
+          <p class="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-300/90">图标尺寸</p>
+          <div class="inline-flex rounded-xl bg-white/10 p-1">
             <button
               v-for="size in iconSizeOptions"
               :key="size.id"
@@ -82,8 +73,8 @@
 
         <div class="mt-5 grid gap-3 sm:grid-cols-2">
           <div>
-            <p class="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-500/90 dark:text-slate-300/90">动效强度</p>
-            <div class="inline-flex rounded-xl bg-slate-900/5 p-1 dark:bg-white/10">
+            <p class="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-300/90">动效强度</p>
+            <div class="inline-flex rounded-xl bg-white/10 p-1">
               <button
                 v-for="item in motionOptions"
                 :key="item.id"
@@ -97,8 +88,8 @@
           </div>
 
           <div>
-            <p class="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-500/90 dark:text-slate-300/90">Dock 动画</p>
-            <div class="inline-flex rounded-xl bg-slate-900/5 p-1 dark:bg-white/10">
+            <p class="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-300/90">Dock 动画</p>
+            <div class="inline-flex rounded-xl bg-white/10 p-1">
               <button
                 v-for="item in motionOptions"
                 :key="`dock-${item.id}`"
@@ -126,7 +117,7 @@
 
       <section class="settings-card lg:col-span-6">
         <h2 class="text-lg font-semibold">动态背景</h2>
-        <p class="mt-1 text-xs text-slate-500 dark:text-slate-300">选择赛博背景风格</p>
+        <p class="mt-1 text-xs text-slate-300">选择赛博背景风格</p>
         <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <button
             v-for="item in wallpaperOptions"
@@ -143,7 +134,7 @@
 
       <section class="settings-card lg:col-span-12">
         <h2 class="text-lg font-semibold">服务状态</h2>
-        <p class="mt-1 text-xs text-slate-500 dark:text-slate-300">检测策略与状态统计</p>
+        <p class="mt-1 text-xs text-slate-300">检测策略与状态统计</p>
         <div class="mt-4 grid gap-3 sm:grid-cols-2">
           <button
             class="toggle-row"
@@ -155,8 +146,8 @@
           </button>
 
           <div>
-            <p class="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-500/90 dark:text-slate-300/90">检测间隔</p>
-            <div class="inline-flex rounded-xl bg-slate-900/5 p-1 dark:bg-white/10">
+          <p class="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-300/90">检测间隔</p>
+          <div class="inline-flex rounded-xl bg-white/10 p-1">
               <button
                 v-for="item in monitorIntervalOptions"
                 :key="item.id"
@@ -180,12 +171,12 @@
 
       <section class="settings-card lg:col-span-12">
         <h2 class="text-lg font-semibold">终端</h2>
-        <p class="mt-1 text-xs text-slate-500 dark:text-slate-300">终端显示与命令行为</p>
+        <p class="mt-1 text-xs text-slate-300">终端显示与命令行为</p>
 
         <div class="mt-4 grid gap-3 sm:grid-cols-3">
           <div class="sm:col-span-1">
-            <p class="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-500/90 dark:text-slate-300/90">字体大小</p>
-            <div class="inline-flex rounded-xl bg-slate-900/5 p-1 dark:bg-white/10">
+          <p class="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-300/90">字体大小</p>
+          <div class="inline-flex rounded-xl bg-white/10 p-1">
               <button
                 v-for="size in terminalFontOptions"
                 :key="`font-${size.id}`"
@@ -199,8 +190,8 @@
           </div>
 
           <div class="sm:col-span-2">
-            <p class="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-500/90 dark:text-slate-300/90">历史条数上限</p>
-            <div class="inline-flex rounded-xl bg-slate-900/5 p-1 dark:bg-white/10">
+          <p class="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-300/90">历史条数上限</p>
+          <div class="inline-flex rounded-xl bg-white/10 p-1">
               <button
                 v-for="item in historyLimitOptions"
                 :key="`hist-${item.id}`"
@@ -327,8 +318,8 @@ const usage = computed(() => {
   width: 100%;
   box-sizing: border-box;
   border-radius: 16px;
-  border: 1px solid rgba(148, 163, 184, 0.24);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(248, 250, 252, 0.58) 100%);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.66) 0%, rgba(2, 6, 23, 0.7) 100%);
   padding: 16px;
   backdrop-filter: blur(12px);
 }
@@ -374,11 +365,6 @@ const usage = computed(() => {
   }
 }
 
-.dark .settings-card {
-  border-color: rgba(148, 163, 184, 0.2);
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.66) 0%, rgba(2, 6, 23, 0.7) 100%);
-}
-
 .settings-btn {
   border-radius: 10px;
   border: 1px solid rgba(148, 163, 184, 0.28);
@@ -417,10 +403,6 @@ const usage = computed(() => {
 
 .toggle-value {
   font-size: 12px;
-  color: rgb(51 65 85);
-}
-
-.dark .toggle-value {
   color: rgb(203 213 225);
 }
 
@@ -430,19 +412,11 @@ const usage = computed(() => {
   padding: 6px 10px;
   font-size: 12px;
   font-weight: 600;
-  color: rgb(71 85 105);
+  color: rgb(203 213 225);
 }
 
 .segment-btn.active {
   background: rgba(56, 189, 248, 0.18);
-  color: rgb(12 74 110);
-}
-
-.dark .segment-btn {
-  color: rgb(203 213 225);
-}
-
-.dark .segment-btn.active {
   color: rgb(186 230 253);
 }
 
@@ -492,26 +466,18 @@ const usage = computed(() => {
 
 .status-online {
   background: rgba(16, 185, 129, 0.2);
-  color: rgb(6 95 70);
+  color: rgb(167 243 208);
 }
 
 .status-offline {
   background: rgba(244, 63, 94, 0.2);
-  color: rgb(159 18 57);
-}
-
-.dark .status-online {
-  color: rgb(167 243 208);
-}
-
-.dark .status-offline {
   color: rgb(254 205 211);
 }
 
 .sys-card {
   border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(30, 41, 59, 0.4);
   padding: 10px 12px;
 }
 
@@ -519,33 +485,20 @@ const usage = computed(() => {
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgb(100 116 139);
+  color: rgb(148 163 184);
 }
 
 .sys-value {
   margin-top: 6px;
   font-size: 14px;
   font-weight: 700;
-  color: rgb(15 23 42);
-}
-
-.dark .sys-card {
-  border-color: rgba(148, 163, 184, 0.2);
-  background: rgba(30, 41, 59, 0.4);
-}
-
-.dark .sys-label {
-  color: rgb(148 163 184);
-}
-
-.dark .sys-value {
   color: rgb(226 232 240);
 }
 
 .sys-meter {
   border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(30, 41, 59, 0.4);
   padding: 10px 12px;
 }
 
@@ -555,7 +508,7 @@ const usage = computed(() => {
   justify-content: space-between;
   font-size: 12px;
   font-weight: 600;
-  color: rgb(51 65 85);
+  color: rgb(203 213 225);
 }
 
 .sys-bar {
@@ -574,12 +527,4 @@ const usage = computed(() => {
   background: linear-gradient(90deg, rgba(56, 189, 248, 0.9) 0%, rgba(14, 165, 233, 0.95) 100%);
 }
 
-.dark .sys-meter {
-  border-color: rgba(148, 163, 184, 0.2);
-  background: rgba(30, 41, 59, 0.4);
-}
-
-.dark .sys-meter-head {
-  color: rgb(203 213 225);
-}
 </style>

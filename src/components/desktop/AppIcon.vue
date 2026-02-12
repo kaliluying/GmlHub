@@ -1,13 +1,13 @@
 <template>
   <div
-    class="app-icon group flex flex-col items-center rounded-2xl cursor-pointer transition-all duration-200 hover:bg-white/25 dark:hover:bg-white/10 hover:backdrop-blur-md"
+    class="app-icon group flex flex-col items-center rounded-2xl cursor-pointer transition-all duration-200 hover:bg-white/10 hover:backdrop-blur-md"
     :class="wrapperClass"
     @click="handleClick"
     @dblclick="handleDoubleClick"
     @contextmenu.prevent.stop="handleContextMenu"
   >
     <div
-      class="icon-container rounded-2xl flex items-center justify-center shadow-lg transition-all duration-200 group-hover:scale-110 group-hover:-translate-y-0.5 border border-white/40 dark:border-white/15"
+      class="icon-container rounded-2xl flex items-center justify-center shadow-lg transition-all duration-200 group-hover:scale-110 group-hover:-translate-y-0.5 border border-white/15"
       :class="iconClass"
       :style="{ backgroundColor: app.color }"
     >

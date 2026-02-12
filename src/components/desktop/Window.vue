@@ -2,7 +2,7 @@
   <div
     v-if="!window.minimized"
     class="window absolute flex flex-col rounded-2xl overflow-hidden window-shadow transition-shadow"
-    :class="{ 'ring-2 ring-sky-300/60 dark:ring-sky-400/40': window.focused, 'window-mobile-panel': isMobilePanel }"
+    :class="{ 'ring-2 ring-sky-400/40': window.focused, 'window-mobile-panel': isMobilePanel }"
     :style="windowStyle"
     @mousedown="handleMouseDown"
   >
@@ -13,7 +13,7 @@
     >
       <div class="flex items-center gap-3">
         <span class="text-lg">{{ window.icon }}</span>
-        <span class="text-sm font-semibold tracking-wide text-gray-800 dark:text-gray-100">{{ window.title }}</span>
+          <span class="text-sm font-semibold tracking-wide text-slate-100">{{ window.title }}</span>
       </div>
       
       <div class="flex items-center gap-2">
@@ -36,7 +36,7 @@
     </div>
     
     <!-- 窗口内容 -->
-    <div class="flex-1 bg-white/86 dark:bg-slate-950/76 backdrop-blur-md overflow-hidden relative">
+      <div class="flex-1 bg-slate-950/76 backdrop-blur-md overflow-hidden relative">
       <TerminalPanel v-if="window.appId === 'terminal'" :window-id="window.id" />
       <SettingsPanel v-else-if="window.appId === 'settings'" />
       <TrashPanel v-else-if="window.appId === 'trash'" />
@@ -46,7 +46,7 @@
         class="w-full h-full border-0"
         sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
       />
-      <div v-else class="w-full h-full flex items-center justify-center text-gray-500 dark:text-slate-300">
+          <div v-else class="w-full h-full flex items-center justify-center text-slate-300">
         <div class="text-center">
           <div class="text-6xl mb-4">{{ window.icon }}</div>
           <p class="text-lg font-medium">{{ window.title }}</p>
@@ -170,16 +170,12 @@ const close = () => {
 .window {
   min-width: 400px;
   min-height: 300px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.14);
 }
 
 .window-mobile-panel {
   min-width: 320px;
   min-height: 320px;
-}
-
-.dark .window {
-  border-color: rgba(255, 255, 255, 0.14);
 }
 
 .resize-handle {

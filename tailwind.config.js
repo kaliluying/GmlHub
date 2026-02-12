@@ -8,7 +8,6 @@ export default {
     extend: {
       colors: {
         glass: {
-          light: 'rgba(255, 255, 255, 0.7)',
           dark: 'rgba(30, 30, 30, 0.7)',
           border: 'rgba(255, 255, 255, 0.3)',
         },
@@ -48,5 +47,4 @@ export default {
     },
   },
   plugins: [],
-  darkMode: 'class',
 }
