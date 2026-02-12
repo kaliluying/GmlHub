@@ -69,11 +69,61 @@
         <span class="font-bold text-gray-800 text-base">🍎</span>
         <span class="font-semibold text-gray-800 tracking-wide">个人OS</span>
       </div>
-      <div class="flex items-center gap-2 md:gap-4">
-        <div class="hidden lg:flex items-center gap-1.5 text-[11px]">
+      <div class="relative flex items-center gap-2 md:gap-4">
+        <div class="hidden lg:block">
+          <button
+            ref="statusButtonRef"
+            class="status-trigger flex items-center gap-1.5 text-[11px]"
+            type="button"
+            @click.stop="toggleStatusPanel"
+          >
           <span class="status-pill bg-emerald-400/25 text-emerald-100">在线 {{ store.serviceSummary.online }}</span>
           <span class="status-pill bg-rose-300/25 text-rose-100">离线 {{ store.serviceSummary.offline }}</span>
           <span v-if="store.isMonitoringStatus" class="status-pill bg-cyan-300/25 text-cyan-100">检测中</span>
+          </button>
+
+          <div v-if="statusPanelOpen" ref="statusPanelRef" class="status-panel glass-strong">
+            <div class="status-panel-head">
+              <span>服务状态</span>
+              <span class="status-panel-time">{{ lastCheckLabel }}</span>
+            </div>
+
+            <div class="status-panel-grid">
+              <section>
+                <p class="status-panel-title text-emerald-200">在线服务 ({{ onlineServiceApps.length }})</p>
+                <div v-if="onlineServiceApps.length" class="status-panel-list">
+                  <button
+                    v-for="app in onlineServiceApps"
+                    :key="`online-${app.id}`"
+                    type="button"
+                    class="status-app-row status-app-row-button"
+                    @click="openStatusService(app.id)"
+                  >
+                    <span>{{ app.name }}</span>
+                    <span class="status-app-domain">{{ app.domain }}</span>
+                  </button>
+                </div>
+                <p v-else class="status-empty">暂无在线服务</p>
+              </section>
+
+              <section>
+                <p class="status-panel-title text-rose-200">离线服务 ({{ offlineServiceApps.length }})</p>
+                <div v-if="offlineServiceApps.length" class="status-panel-list">
+                  <button
+                    v-for="app in offlineServiceApps"
+                    :key="`offline-${app.id}`"
+                    type="button"
+                    class="status-app-row status-app-row-button"
+                    @click="openStatusService(app.id)"
+                  >
+                    <span>{{ app.name }}</span>
+                    <span class="status-app-domain">{{ app.domain }}</span>
+                  </button>
+                </div>
+                <p v-else class="status-empty">暂无离线服务</p>
+              </section>
+            </div>
+          </div>
         </div>
         <button
           class="h-7 rounded-full px-3 bg-white/50 text-xs text-gray-700 hover:text-gray-900 hover:bg-white/70 transition"
@@ -257,6 +307,9 @@ const contextMenu = ref({ show: false, x: 0, y: 0 })
 const pointer = ref({ x: 50, y: 50, active: false })
 const launcherInput = ref(null)
 const launcher = ref({ open: false, query: '', selectedIndex: 0 })
+const statusPanelOpen = ref(false)
+const statusPanelRef = ref(null)
+const statusButtonRef = ref(null)
 const prefersReducedMotion = ref(false)
 const isPageVisible = ref(true)
 const showBootSequence = ref(false)
@@ -438,6 +491,14 @@ const panelQuickApps = computed(() => {
   return fallback.slice(0, 5)
 })
 
+const onlineServiceApps = computed(() => {
+  return store.apps.filter(app => app.url && app.status === 'online')
+})
+
+const offlineServiceApps = computed(() => {
+  return store.apps.filter(app => app.url && app.status === 'offline')
+})
+
 const availabilityRate = computed(() => {
   const { total, online } = store.serviceSummary
   if (!total) return 0
@@ -582,6 +643,7 @@ onMounted(() => {
 
   window.addEventListener('keydown', handleGlobalKeydown)
   window.addEventListener(ICON_MENU_EVENT, hideContextMenu)
+  document.addEventListener('pointerdown', handleStatusPanelOutside, true)
 })
 
 watch(
@@ -614,6 +676,7 @@ onUnmounted(() => {
 
   window.removeEventListener('keydown', handleGlobalKeydown)
   window.removeEventListener(ICON_MENU_EVENT, hideContextMenu)
+  document.removeEventListener('pointerdown', handleStatusPanelOutside, true)
 })
 
 const handleReducedMotionChange = (event) => {
@@ -725,10 +788,33 @@ const handleGlobalKeydown = async (event) => {
 
   if (event.key === 'Escape' && launcher.value.open) {
     closeLauncher()
+    return
+  }
+
+  if (event.key === 'Escape' && statusPanelOpen.value) {
+    closeStatusPanel()
   }
 }
 
+const closeStatusPanel = () => {
+  statusPanelOpen.value = false
+}
+
+const toggleStatusPanel = () => {
+  statusPanelOpen.value = !statusPanelOpen.value
+}
+
+const handleStatusPanelOutside = (event) => {
+  if (!statusPanelOpen.value) return
+  const target = event.target
+  if (!(target instanceof Element)) return
+  if (statusPanelRef.value?.contains(target)) return
+  if (statusButtonRef.value?.contains(target)) return
+  closeStatusPanel()
+}
+
 const openLauncher = async () => {
+  closeStatusPanel()
   launcher.value.open = true
   launcher.value.query = ''
   launcher.value.selectedIndex = 0
@@ -765,6 +851,11 @@ const openWidgetApp = (appId) => {
   store.openWindow(appId)
 }
 
+const openStatusService = (appId) => {
+  closeStatusPanel()
+  store.openWindow(appId)
+}
+
 const launchSelected = () => {
   const selected = launcherApps.value[launcher.value.selectedIndex]
   if (!selected) return
@@ -785,6 +876,7 @@ const statusText = (status) => {
 }
 
 const showContextMenu = (e) => {
+  closeStatusPanel()
   window.dispatchEvent(new CustomEvent(DESKTOP_MENU_EVENT))
   contextMenu.value = {
     show: true,
@@ -1277,6 +1369,98 @@ const changeWallpaper = () => {
   backdrop-filter: blur(8px);
 }
 
+.status-trigger {
+  border-radius: 999px;
+  padding: 3px 5px;
+}
+
+.status-trigger:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.status-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(560px, calc(100vw - 34px));
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  padding: 12px;
+  color: rgb(226 232 240);
+  box-shadow: 0 20px 46px rgba(2, 8, 23, 0.5);
+}
+
+.status-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.status-panel-time {
+  font-size: 11px;
+  color: rgb(148 163 184);
+}
+
+.status-panel-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.status-panel-title {
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.status-panel-list {
+  display: grid;
+  gap: 6px;
+}
+
+.status-app-row {
+  border-radius: 9px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(15, 23, 42, 0.38);
+  padding: 6px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.status-app-row-button {
+  width: 100%;
+  text-align: left;
+  transition: all 140ms ease;
+}
+
+.status-app-row-button:hover {
+  border-color: rgba(56, 189, 248, 0.52);
+  background: rgba(14, 116, 144, 0.24);
+}
+
+.status-app-domain {
+  max-width: 180px;
+  font-size: 10px;
+  color: rgb(148 163 184);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-empty {
+  border-radius: 9px;
+  border: 1px dashed rgba(148, 163, 184, 0.36);
+  padding: 8px;
+  font-size: 11px;
+  color: rgb(148 163 184);
+}
+
 .launcher-overlay {
   position: fixed;
   inset: 0;
@@ -1556,6 +1740,16 @@ const changeWallpaper = () => {
 
   .cyber-pointer-glow {
     display: none;
+  }
+
+  .status-panel {
+    width: min(420px, calc(100vw - 22px));
+    right: -8px;
+    padding: 10px;
+  }
+
+  .status-panel-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>
