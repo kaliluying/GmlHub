@@ -1,19 +1,19 @@
 <template>
   <div
-    class="app-icon group flex flex-col items-center rounded-2xl cursor-pointer transition-all duration-200 hover:bg-white/10 hover:backdrop-blur-md"
+    class="app-icon group flex flex-col items-center rounded-2xl cursor-pointer transition-all duration-200"
     :class="wrapperClass"
     @click="handleClick"
     @dblclick="handleDoubleClick"
     @contextmenu.prevent.stop="handleContextMenu"
   >
     <div
-      class="icon-container rounded-2xl flex items-center justify-center shadow-lg transition-all duration-200 group-hover:scale-110 group-hover:-translate-y-0.5 border border-white/15"
+      class="icon-container rounded-[1.1rem] flex items-center justify-center transition-all duration-200 group-hover:scale-[1.08] group-hover:-translate-y-0.5 border border-white/25"
       :class="iconClass"
       :style="{ backgroundColor: app.color }"
     >
       <span class="text-white drop-shadow-md">{{ app.icon }}</span>
     </div>
-    <span class="text-[12px] sm:text-sm font-medium text-white/95 drop-shadow-md text-center px-2.5 py-1 rounded-lg bg-black/30 border border-white/20 max-w-full truncate">
+    <span class="desktop-icon-label">
       {{ app.name }}
     </span>
 
@@ -157,18 +157,62 @@ onUnmounted(() => {
 
 <style scoped>
 .app-icon {
-  width: 86px;
+  width: 92px;
+  border: 1px solid transparent;
+  transition: background 170ms ease, border-color 170ms ease, box-shadow 170ms ease;
+}
+
+.app-icon:hover {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, rgba(15, 23, 42, 0.12) 100%);
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow: 0 12px 28px -22px rgba(8, 15, 33, 0.9);
 }
 
 @media (min-width: 640px) {
   .app-icon {
-    width: 100px;
+    width: 106px;
   }
 }
 
 .icon-container {
   box-shadow: 
-    0 8px 20px rgba(10, 20, 36, 0.25),
-    0 0 0 1px rgba(255, 255, 255, 0.16) inset;
+    0 12px 24px rgba(10, 20, 36, 0.3),
+    0 1px 0 rgba(255, 255, 255, 0.36) inset;
+  position: relative;
+  overflow: hidden;
+}
+
+.icon-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.48) 0%, rgba(255, 255, 255, 0.14) 34%, rgba(255, 255, 255, 0.02) 70%);
+}
+
+.desktop-icon-label {
+  width: 100%;
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 500;
+  color: rgba(248, 250, 252, 0.98);
+  text-align: center;
+  padding: 0.28rem 0.48rem;
+  border-radius: 0.58rem;
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  background: rgba(15, 23, 42, 0.36);
+  backdrop-filter: blur(5px);
+  text-shadow: 0 1px 2px rgba(2, 6, 23, 0.78);
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (min-width: 640px) {
+  .desktop-icon-label {
+    font-size: 13px;
+    border-radius: 0.62rem;
+  }
 }
 </style>

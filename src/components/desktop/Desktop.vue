@@ -64,16 +64,22 @@
     <div class="ambient-orb w-96 h-96 bottom-[-140px] right-[-90px] bg-sky-300/18" />
     
     <!-- 顶部菜单栏 -->
-    <div class="menu-bar h-10 flex items-center justify-between px-3 md:px-5 glass fixed top-0 left-0 right-0 z-40">
-      <div class="flex items-center gap-2 md:gap-4">
-        <span class="font-bold text-slate-100 text-base">🍎</span>
-        <span class="font-semibold text-slate-100 tracking-wide">个人OS</span>
+    <div class="menu-bar fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-3 md:px-5">
+      <div class="menu-brand-group">
+        <span class="menu-apple">🍎</span>
+        <span class="menu-title">个人OS</span>
+        <span class="menu-divider hidden md:block" />
+        <div class="menu-nav hidden xl:flex">
+          <span class="menu-nav-item">文件</span>
+          <span class="menu-nav-item">编辑</span>
+          <span class="menu-nav-item">窗口</span>
+        </div>
       </div>
-      <div class="relative flex items-center gap-2 md:gap-4">
+      <div class="menu-right-group relative">
         <div class="hidden lg:block">
           <button
             ref="statusButtonRef"
-            class="status-trigger flex items-center gap-1.5 text-[11px]"
+            class="status-trigger menu-chip-cluster flex items-center gap-1.5 text-[11px]"
             type="button"
             @click.stop="toggleStatusPanel"
           >
@@ -126,18 +132,18 @@
           </div>
         </div>
         <button
-          class="h-7 rounded-full px-3 bg-white/14 text-xs text-slate-100 hover:text-white hover:bg-white/24 transition"
+          class="menu-action-btn menu-utility-btn"
           @click="changeWallpaper"
         >
           换风格
         </button>
         <button
-          class="h-7 rounded-full px-3 bg-black/25 text-[11px] text-slate-100 hover:bg-black/40 transition"
+          class="menu-shortcut-btn menu-utility-btn"
           @click="openLauncher"
         >
           Ctrl+K
         </button>
-        <span class="text-sm font-medium text-slate-100 min-w-[46px] text-right">{{ currentTime }}</span>
+        <span class="menu-clock">{{ currentTime }}</span>
       </div>
     </div>
 
@@ -210,10 +216,10 @@
       </div>
     </div>
     
-    <div class="desktop-workspace relative z-20 pt-14 md:pt-16 px-3 pb-28 md:pb-32 md:px-8">
+    <div class="desktop-workspace relative z-20 pt-14 md:pt-[4.1rem] px-4 pb-32 md:pb-36 md:px-10">
       <div class="desktop-main-grid">
         <div
-          class="desktop-icons grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 sm:gap-3 md:gap-4 content-start"
+          class="desktop-icons grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-5 content-start"
           :class="desktopIconGridClass"
         >
           <AppIcon
@@ -914,6 +920,9 @@ const changeWallpaper = () => {
 <style scoped>
 .desktop {
   user-select: none;
+  --menu-frost: rgba(246, 248, 255, 0.26);
+  --menu-border: rgba(255, 255, 255, 0.4);
+  --menu-shadow: rgba(12, 18, 34, 0.32);
 }
 
 .boot-sequence {
@@ -1135,7 +1144,17 @@ const changeWallpaper = () => {
 
 .desktop-main-grid {
   display: grid;
-  gap: 14px;
+  gap: 20px;
+}
+
+.desktop-workspace {
+  min-height: calc(100% - 2.25rem);
+}
+
+.desktop-icons {
+  align-content: start;
+  justify-items: start;
+  max-width: 860px;
 }
 
 @media (min-width: 1280px) {
@@ -1349,20 +1368,135 @@ const changeWallpaper = () => {
 }
 
 .menu-bar {
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  height: 2.25rem;
+  border-bottom: 1px solid var(--menu-border);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.24) 0%, rgba(236, 242, 255, 0.12) 100%),
+    var(--menu-frost);
+  backdrop-filter: saturate(150%) blur(20px);
+  -webkit-backdrop-filter: saturate(150%) blur(20px);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.44) inset,
+    0 8px 22px -14px var(--menu-shadow);
+}
+
+.menu-brand-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.menu-apple {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  font-size: 0.95rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.44) inset;
+}
+
+.menu-title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgb(248 250 252);
+  text-shadow: 0 1px 2px rgba(15, 23, 42, 0.32);
+}
+
+.menu-divider {
+  width: 1px;
+  height: 0.85rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.42);
+  margin: 0 0.3rem;
+}
+
+.menu-nav {
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.menu-nav-item {
+  padding: 0.2rem 0.48rem;
+  border-radius: 0.42rem;
+  font-size: 12px;
+  color: rgba(248, 250, 252, 0.9);
+  transition: background 140ms ease;
+}
+
+.menu-nav-item:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.menu-right-group {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.menu-action-btn,
+.menu-shortcut-btn {
+  height: 1.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 0 0.72rem;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: rgb(248 250 252);
+  transition: all 160ms ease;
+}
+
+.menu-utility-btn {
+  min-width: 3.65rem;
+}
+
+.menu-action-btn {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.menu-shortcut-btn {
+  background: rgba(15, 23, 42, 0.28);
+}
+
+.menu-action-btn:hover,
+.menu-shortcut-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.44);
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.menu-clock {
+  min-width: 48px;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.03em;
+  color: rgb(248 250 252);
+  text-shadow: 0 1px 2px rgba(15, 23, 42, 0.35);
+}
+
+.menu-chip-cluster {
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(7px);
 }
 
 .status-pill {
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 999px;
-  padding: 2px 8px;
+  padding: 2px 9px;
   backdrop-filter: blur(8px);
 }
 
 .status-trigger {
   border-radius: 999px;
-  padding: 3px 5px;
+  padding: 3px 7px;
 }
 
 .status-trigger:hover {
@@ -1705,6 +1839,33 @@ const changeWallpaper = () => {
 }
 
 @media (max-width: 640px) {
+  .menu-bar {
+    padding-left: 0.65rem;
+    padding-right: 0.65rem;
+  }
+
+  .menu-brand-group {
+    gap: 0.42rem;
+  }
+
+  .menu-title {
+    font-size: 12px;
+  }
+
+  .menu-right-group {
+    gap: 0.45rem;
+  }
+
+  .menu-action-btn,
+  .menu-shortcut-btn {
+    padding: 0 0.58rem;
+  }
+
+  .desktop-workspace {
+    padding-top: 3.45rem;
+    padding-bottom: 7.75rem;
+  }
+
   .boot-core {
     width: min(390px, calc(100vw - 28px));
   }
@@ -1715,6 +1876,7 @@ const changeWallpaper = () => {
 
   .desktop-icons {
     justify-items: center;
+    max-width: 100%;
   }
 
   .tech-grid-layer {

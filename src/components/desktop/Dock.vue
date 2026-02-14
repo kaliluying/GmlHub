@@ -2,7 +2,7 @@
   <div class="dock-container fixed left-1/2 -translate-x-1/2 z-50">
     <div
       ref="dockRef"
-      class="dock dock-surface flex items-end gap-2.5 sm:gap-3 px-3 sm:px-[1.125rem] pt-3.5 pb-2.5 sm:pb-3 rounded-3xl sm:rounded-[1.85rem] glass dock-shadow"
+      class="dock dock-surface flex items-end gap-2.5 sm:gap-3 px-3 sm:px-[1.125rem] pt-3 pb-2 sm:pb-2.5 rounded-[1.55rem] sm:rounded-[1.8rem] dock-shadow"
       :style="dockBoardStyle"
       @mousemove="handleDockMouseMove"
       @mouseleave="handleDockMouseLeave"
@@ -21,7 +21,7 @@
         :aria-label="`打开 ${app.name}`"
       >
         <div
-          class="dock-icon rounded-xl flex items-center justify-center cursor-pointer border border-white/15"
+          class="dock-icon rounded-[1.15rem] flex items-center justify-center cursor-pointer border border-white/20"
           :class="dockIconClass"
           :style="{ backgroundColor: app.color, ...getIconShellStyle(index) }"
         >
@@ -30,15 +30,15 @@
 
         <div
           v-if="isAppOpen(app.id)"
-            class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-gray-100"
+            class="dock-open-indicator"
         />
 
-        <div class="tooltip absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1 rounded-lg bg-gray-900/85 text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+        <div class="tooltip dock-tooltip absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1 rounded-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
           {{ app.name }}
         </div>
       </div>
 
-      <div class="w-px h-8 sm:h-10 bg-white/20 mx-1.5 sm:mx-2" />
+      <div class="dock-divider" />
 
       <div
         class="dock-item relative group"
@@ -50,20 +50,22 @@
         tabindex="0"
         aria-label="打开废纸篓"
       >
-      <div class="dock-icon rounded-xl flex items-center justify-center bg-white/10 border border-white/15 cursor-pointer" :class="dockIconClass" :style="getIconShellStyle(trashIndex)">
+      <div class="dock-icon dock-trash rounded-[1.15rem] flex items-center justify-center border border-white/20 cursor-pointer" :class="dockIconClass" :style="getIconShellStyle(trashIndex)">
           <span :style="getIconStyle(trashIndex)">🗑️</span>
         </div>
-        <div class="tooltip absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1 rounded-lg bg-gray-900/85 text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+        <div class="tooltip dock-tooltip absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1 rounded-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
           废纸篓
         </div>
 
         <div
           v-if="store.trashCount > 0"
-          class="absolute -top-2 -right-2 min-w-4 h-4 px-1 rounded-full bg-rose-500 text-white text-[10px] leading-4 text-center font-semibold"
+          class="dock-trash-badge"
         >
           {{ store.trashCount }}
         </div>
       </div>
+
+      <div class="dock-reflection" aria-hidden="true" />
     </div>
 
     <div v-show="canScrollLeft" class="dock-scroll-fade dock-scroll-fade-left" aria-hidden="true" />
@@ -296,6 +298,12 @@ watch(
   width: fit-content;
   max-width: 100%;
   margin: 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  background:
+    linear-gradient(180deg, rgba(248, 251, 255, 0.34) 0%, rgba(231, 239, 255, 0.14) 58%, rgba(215, 227, 245, 0.1) 100%),
+    rgba(228, 236, 249, 0.2);
+  backdrop-filter: saturate(160%) blur(22px);
+  -webkit-backdrop-filter: saturate(160%) blur(22px);
   transition: transform 180ms cubic-bezier(0.22, 0.8, 0.22, 1);
 }
 
@@ -305,12 +313,10 @@ watch(
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0.08) 22%, rgba(255, 255, 255, 0) 44%),
-    radial-gradient(140% 110% at 50% 118%, rgba(2, 6, 23, 0.5) 0%, rgba(2, 6, 23, 0) 56%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.58) 0%, rgba(255, 255, 255, 0.12) 30%, rgba(255, 255, 255, 0) 56%);
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.22) inset,
-    0 -1px 0 rgba(148, 163, 184, 0.15) inset;
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 -1px 0 rgba(148, 163, 184, 0.22) inset;
 }
 
 .dock-surface::after {
@@ -319,7 +325,7 @@ watch(
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
-  background: linear-gradient(170deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 52%, rgba(255, 255, 255, 0) 100%);
+  background: radial-gradient(125% 100% at 50% 112%, rgba(15, 23, 42, 0.3) 0%, rgba(15, 23, 42, 0) 56%);
 }
 
 .dock::-webkit-scrollbar {
@@ -338,12 +344,83 @@ watch(
 }
 
 .dock-icon {
+  position: relative;
+  overflow: hidden;
+  box-shadow:
+    0 8px 20px rgba(15, 23, 42, 0.26),
+    0 1px 0 rgba(255, 255, 255, 0.34) inset;
   transition: transform 170ms cubic-bezier(0.22, 0.8, 0.22, 1);
   will-change: transform;
 }
 
-.tooltip {
+.dock-icon::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0.08) 42%, rgba(255, 255, 255, 0) 72%);
+}
+
+.dock-trash {
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.34) 0%, rgba(203, 213, 225, 0.24) 100%);
+}
+
+.dock-divider {
+  width: 1px;
+  height: 2.4rem;
+  margin: 0 0.4rem;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(148, 163, 184, 0.4) 100%);
+}
+
+.dock-open-indicator {
+  position: absolute;
+  left: 50%;
+  bottom: -0.35rem;
+  width: 0.32rem;
+  height: 0.32rem;
+  border-radius: 999px;
+  transform: translateX(-50%);
+  background: rgba(241, 245, 249, 0.92);
+  box-shadow: 0 0 8px rgba(248, 250, 252, 0.75);
+}
+
+.dock-tooltip {
   z-index: 100;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(15, 23, 42, 0.8);
+  color: rgba(248, 250, 252, 0.96);
+  backdrop-filter: blur(8px);
+}
+
+.dock-trash-badge {
+  position: absolute;
+  top: -0.46rem;
+  right: -0.46rem;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.25rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: linear-gradient(180deg, #fb7185 0%, #e11d48 100%);
+  color: #fff;
+  font-size: 10px;
+  line-height: 0.9rem;
+  text-align: center;
+  font-weight: 700;
+  box-shadow: 0 4px 10px rgba(225, 29, 72, 0.38);
+}
+
+.dock-reflection {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: -0.42rem;
+  height: 0.78rem;
+  border-radius: 999px;
+  pointer-events: none;
+  background: radial-gradient(50% 100% at 50% 0%, rgba(248, 250, 252, 0.34) 0%, rgba(248, 250, 252, 0) 100%);
+  filter: blur(0.5px);
 }
 
 .dock-scroll-fade {
@@ -369,7 +446,7 @@ watch(
     justify-content: flex-start;
     gap: 0.55rem;
     padding: 0.8rem 0.65rem calc(0.55rem + env(safe-area-inset-bottom) * 0.2);
-    border-radius: 1rem;
+    border-radius: 1.1rem;
     -webkit-overflow-scrolling: touch;
   }
 
@@ -382,7 +459,7 @@ watch(
   .dock-icon {
     width: clamp(2.7rem, 10.8vw, 3rem);
     height: clamp(2.7rem, 10.8vw, 3rem);
-    border-radius: 0.8rem;
+    border-radius: 0.94rem;
   }
 
   .dock-icon > span {
@@ -398,6 +475,10 @@ watch(
   }
 
   .tooltip {
+    display: none;
+  }
+
+  .dock-reflection {
     display: none;
   }
 
