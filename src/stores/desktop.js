@@ -7,6 +7,7 @@ export const useDesktopStore = defineStore('desktop', () => {
   const SETTINGS_STORAGE_KEY = 'desktop.settings'
   const TRASHED_APPS_STORAGE_KEY = 'desktop.trashedApps'
   const REMOVED_APPS_STORAGE_KEY = 'desktop.removedApps'
+  const APP_ORDER_STORAGE_KEY = 'desktop.appOrder'
 
   // 应用配置
   const apps = ref([
@@ -304,7 +305,27 @@ export const useDesktopStore = defineStore('desktop', () => {
     removedAppIds.value = readStorageList(REMOVED_APPS_STORAGE_KEY)
       .filter(id => validAppIds.has(id))
 
+    loadAppOrder()
     loadSettings()
+  }
+
+  const loadAppOrder = () => {
+    const validAppIds = new Set(apps.value.map(app => app.id))
+    const orderedIds = readStorageList(APP_ORDER_STORAGE_KEY)
+      .filter(id => validAppIds.has(id))
+
+    if (!orderedIds.length) return
+
+    const orderMap = new Map(orderedIds.map((id, index) => [id, index]))
+    apps.value = [...apps.value].sort((a, b) => {
+      const aIndex = orderMap.has(a.id) ? orderMap.get(a.id) : Number.MAX_SAFE_INTEGER
+      const bIndex = orderMap.has(b.id) ? orderMap.get(b.id) : Number.MAX_SAFE_INTEGER
+      return aIndex - bIndex
+    })
+  }
+
+  const saveAppOrder = () => {
+    writeStorageList(APP_ORDER_STORAGE_KEY, apps.value.map(app => app.id))
   }
 
   const saveTrashState = () => {
@@ -832,6 +853,22 @@ export const useDesktopStore = defineStore('desktop', () => {
     }
   }
 
+  const reorderDesktopApps = (fromAppId, toAppId) => {
+    if (!fromAppId || !toAppId) return
+    if (fromAppId === toAppId) return
+
+    const fromIndex = apps.value.findIndex(app => app.id === fromAppId)
+    const toIndex = apps.value.findIndex(app => app.id === toAppId)
+    if (fromIndex < 0 || toIndex < 0) return
+
+    const nextApps = [...apps.value]
+    const [moved] = nextApps.splice(fromIndex, 1)
+    nextApps.splice(toIndex, 0, moved)
+
+    apps.value = nextApps
+    saveAppOrder()
+  }
+
   return {
     apps,
     windows,
@@ -871,6 +908,7 @@ export const useDesktopStore = defineStore('desktop', () => {
     setAutoStartMonitoring,
     setStatusMonitorInterval,
     resetSettings,
+    reorderDesktopApps,
     loadPortalState,
     loadSettings,
     togglePinnedApp,

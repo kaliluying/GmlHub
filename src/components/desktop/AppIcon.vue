@@ -2,9 +2,15 @@
   <div
     class="app-icon group flex flex-col items-center rounded-2xl cursor-pointer transition-all duration-200"
     :class="wrapperClass"
+    draggable="true"
     @click="handleClick"
     @dblclick="handleDoubleClick"
     @contextmenu.prevent.stop="handleContextMenu"
+    @dragstart="handleDragStart"
+    @dragenter.prevent="handleDragEnter"
+    @dragover.prevent="handleDragOver"
+    @drop.prevent="handleDrop"
+    @dragend="handleDragEnd"
   >
     <div
       class="icon-container rounded-[1.1rem] flex items-center justify-center transition-all duration-200 group-hover:scale-[1.08] group-hover:-translate-y-0.5 border border-white/25"
@@ -42,11 +48,29 @@ const props = defineProps({
     type: String,
     default: 'medium',
   },
+  isDragging: {
+    type: Boolean,
+    default: false,
+  },
+  isDropTarget: {
+    type: Boolean,
+    default: false,
+  },
 })
+
+const emit = defineEmits([
+  'drag-start-icon',
+  'drag-enter-icon',
+  'drag-over-icon',
+  'drop-icon',
+  'drag-end-icon',
+])
 
 const store = useDesktopStore()
 const contextMenu = ref({ show: false, x: 0, y: 0 })
 let clickTimer = null
+const suppressOpenUntil = ref(0)
+const didDrag = ref(false)
 
 const ICON_MENU_EVENT = 'desktop:icon-context-menu-open'
 const DESKTOP_MENU_EVENT = 'desktop:context-menu-open'
@@ -60,9 +84,17 @@ const iconMenuItems = computed(() => {
 })
 
 const wrapperClass = computed(() => {
-  if (props.iconSize === 'small') return 'gap-2 p-2 sm:p-2.5'
-  if (props.iconSize === 'large') return 'gap-3 p-3 sm:p-3.5'
-  return 'gap-2.5 p-2.5 sm:p-3'
+  let sizeClass = 'gap-2.5 p-2.5 sm:p-3'
+  if (props.iconSize === 'small') sizeClass = 'gap-2 p-2 sm:p-2.5'
+  if (props.iconSize === 'large') sizeClass = 'gap-3 p-3 sm:p-3.5'
+
+  return [
+    sizeClass,
+    {
+      'is-dragging': props.isDragging,
+      'is-drop-target': props.isDropTarget,
+    },
+  ]
 })
 
 const iconClass = computed(() => {
@@ -72,6 +104,8 @@ const iconClass = computed(() => {
 })
 
 const handleClick = () => {
+  if (Date.now() < suppressOpenUntil.value) return
+
   closeContextMenu()
   if (clickTimer) {
     clearTimeout(clickTimer)
@@ -85,6 +119,8 @@ const handleClick = () => {
 }
 
 const handleDoubleClick = () => {
+  if (Date.now() < suppressOpenUntil.value) return
+
   if (clickTimer) {
     clearTimeout(clickTimer)
     clickTimer = null
@@ -92,6 +128,42 @@ const handleDoubleClick = () => {
 
   closeContextMenu()
   store.openWindow(props.app.id)
+}
+
+const handleDragStart = (event) => {
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', props.app.id)
+  }
+
+  didDrag.value = false
+  emit('drag-start-icon', props.app.id)
+}
+
+const handleDragEnter = () => {
+  emit('drag-enter-icon', props.app.id)
+}
+
+const handleDragOver = (event) => {
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'move'
+  }
+
+  didDrag.value = true
+  emit('drag-over-icon', props.app.id)
+}
+
+const handleDrop = () => {
+  emit('drop-icon', props.app.id)
+}
+
+const handleDragEnd = () => {
+  if (didDrag.value) {
+    suppressOpenUntil.value = Date.now() + 200
+  }
+
+  didDrag.value = false
+  emit('drag-end-icon', props.app.id)
 }
 
 const handleContextMenu = (event) => {
@@ -166,6 +238,17 @@ onUnmounted(() => {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, rgba(15, 23, 42, 0.12) 100%);
   border-color: rgba(255, 255, 255, 0.28);
   box-shadow: 0 12px 28px -22px rgba(8, 15, 33, 0.9);
+}
+
+.app-icon.is-dragging {
+  opacity: 0.7;
+  transform: scale(0.96);
+}
+
+.app-icon.is-drop-target {
+  border-color: rgba(34, 211, 238, 0.72);
+  background: linear-gradient(180deg, rgba(14, 165, 233, 0.24) 0%, rgba(8, 47, 73, 0.18) 100%);
+  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.48), 0 14px 28px -22px rgba(34, 211, 238, 0.8);
 }
 
 @media (min-width: 640px) {

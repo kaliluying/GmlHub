@@ -221,12 +221,21 @@
         <div
           class="desktop-icons grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 sm:gap-4 md:gap-5 content-start"
           :class="desktopIconGridClass"
+          @dragover.prevent
+          @drop.prevent="handleIconGridDrop"
         >
           <AppIcon
             v-for="app in store.desktopApps"
             :key="app.id"
             :app="app"
             :icon-size="store.settings.iconSize"
+            :is-dragging="dragState.draggedId === app.id"
+            :is-drop-target="dragState.targetId === app.id"
+            @drag-start-icon="handleIconDragStart"
+            @drag-enter-icon="handleIconDragEnter"
+            @drag-over-icon="handleIconDragOver"
+            @drop-icon="handleIconDrop"
+            @drag-end-icon="handleIconDragEnd"
           />
         </div>
 
@@ -313,6 +322,7 @@ const contextMenu = ref({ show: false, x: 0, y: 0 })
 const pointer = ref({ x: 50, y: 50, active: false })
 const launcherInput = ref(null)
 const launcher = ref({ open: false, query: '', selectedIndex: 0 })
+const dragState = ref({ draggedId: null, targetId: null })
 const statusPanelOpen = ref(false)
 const statusPanelRef = ref(null)
 const statusButtonRef = ref(null)
@@ -769,6 +779,53 @@ const handlePointerMove = (event) => {
 
 const resetPointer = () => {
   pointer.value.active = false
+}
+
+const resetDragState = () => {
+  dragState.value = { draggedId: null, targetId: null }
+}
+
+const handleIconDragStart = (appId) => {
+  hideContextMenu()
+  closeStatusPanel()
+  dragState.value = {
+    draggedId: appId,
+    targetId: null,
+  }
+}
+
+const handleIconDragEnter = (appId) => {
+  if (!dragState.value.draggedId) return
+  if (!appId || appId === dragState.value.draggedId) return
+  dragState.value.targetId = appId
+}
+
+const handleIconDragOver = (appId) => {
+  if (!dragState.value.draggedId) return
+  if (!appId || appId === dragState.value.draggedId) return
+  dragState.value.targetId = appId
+}
+
+const handleIconDrop = (appId) => {
+  const fromAppId = dragState.value.draggedId
+  if (!fromAppId) {
+    resetDragState()
+    return
+  }
+
+  if (appId && appId !== fromAppId) {
+    store.reorderDesktopApps(fromAppId, appId)
+  }
+
+  resetDragState()
+}
+
+const handleIconGridDrop = () => {
+  resetDragState()
+}
+
+const handleIconDragEnd = () => {
+  resetDragState()
 }
 
 const handleGlobalKeydown = async (event) => {
