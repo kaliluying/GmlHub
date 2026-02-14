@@ -8,6 +8,7 @@
     @contextmenu.prevent.stop="handleContextMenu"
     @dragstart="handleDragStart"
     @dragenter.prevent="handleDragEnter"
+    @dragleave="handleDragLeave"
     @dragover.prevent="handleDragOver"
     @drop.prevent="handleDrop"
     @dragend="handleDragEnd"
@@ -61,6 +62,7 @@ const props = defineProps({
 const emit = defineEmits([
   'drag-start-icon',
   'drag-enter-icon',
+  'drag-leave-icon',
   'drag-over-icon',
   'drop-icon',
   'drag-end-icon',
@@ -151,6 +153,15 @@ const handleDragOver = (event) => {
 
   didDrag.value = true
   emit('drag-over-icon', props.app.id)
+}
+
+const handleDragLeave = (event) => {
+  const nextTarget = event.relatedTarget
+  if (nextTarget instanceof Node && event.currentTarget instanceof Node && event.currentTarget.contains(nextTarget)) {
+    return
+  }
+
+  emit('drag-leave-icon', props.app.id)
 }
 
 const handleDrop = () => {

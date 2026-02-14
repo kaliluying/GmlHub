@@ -221,7 +221,7 @@
         <div
           class="desktop-icons grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 sm:gap-4 md:gap-5 content-start"
           :class="desktopIconGridClass"
-          @dragover.prevent
+          @dragover.prevent="handleIconGridDragOver"
           @drop.prevent="handleIconGridDrop"
         >
           <AppIcon
@@ -233,6 +233,7 @@
             :is-drop-target="dragState.targetId === app.id"
             @drag-start-icon="handleIconDragStart"
             @drag-enter-icon="handleIconDragEnter"
+            @drag-leave-icon="handleIconDragLeave"
             @drag-over-icon="handleIconDragOver"
             @drop-icon="handleIconDrop"
             @drag-end-icon="handleIconDragEnd"
@@ -804,6 +805,24 @@ const handleIconDragOver = (appId) => {
   if (!dragState.value.draggedId) return
   if (!appId || appId === dragState.value.draggedId) return
   dragState.value.targetId = appId
+}
+
+const handleIconDragLeave = (appId) => {
+  if (dragState.value.targetId !== appId) return
+  dragState.value.targetId = null
+}
+
+const handleIconGridDragOver = (event) => {
+  if (!dragState.value.draggedId) return
+  const target = event.target
+  if (!(target instanceof Element)) {
+    dragState.value.targetId = null
+    return
+  }
+
+  if (!target.closest('.app-icon')) {
+    dragState.value.targetId = null
+  }
 }
 
 const handleIconDrop = (appId) => {
