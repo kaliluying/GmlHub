@@ -61,7 +61,7 @@ const baseCommands = [
   'help', 'open', 'status', 'theme', 'clear',
   'pwd', 'ls', 'cd', 'cat', 'whoami', 'uname',
   'date', 'uptime', 'ip', 'ifconfig', 'ping',
-  'curl', 'ps', 'df', 'free', 'history', 'echo', 'head', 'tail', 'grep', 'wc', 'mkdir', 'touch', 'rm', 'exit',
+  'curl', 'ps', 'df', 'free', 'history', 'echo', 'head', 'tail', 'grep', 'wc', 'mkdir', 'touch', 'rm', 'sudo', 'exit',
 ]
 const commandAliases = {
   ll: 'ls',
@@ -207,6 +207,43 @@ const getAppCandidates = () => {
   return unique.sort((a, b) => a.localeCompare(b, 'en'))
 }
 
+const getOptionCandidates = (commandName) => {
+  if (commandName === 'ls') return ['-a', '-l', '-al', '-la']
+  if (commandName === 'rm') return ['-r', '-f', '-rf', '-fr']
+  if (commandName === 'ping') return ['-c']
+  if (commandName === 'curl') return ['-I', '--head']
+  if (commandName === 'uname') return ['-a']
+  if (commandName === 'df') return ['-h']
+  if (commandName === 'free') return ['-m']
+  if (commandName === 'head' || commandName === 'tail') return ['-n']
+  if (commandName === 'wc') return ['-l']
+  return []
+}
+
+const setCommandWithArgs = (commandName, argsBeforeActive, nextArg, appendSpace = false) => {
+  const parts = [commandName, ...argsBeforeActive]
+  if (nextArg !== null && nextArg !== undefined) parts.push(nextArg)
+  command.value = parts.join(' ')
+  if (appendSpace) command.value += ' '
+}
+
+const completeArgument = async (commandName, argsBeforeActive, currentArg, candidates) => {
+  const matches = candidates.filter(item => item.startsWith(currentArg))
+  if (!matches.length) return false
+
+  if (matches.length === 1) {
+    setCommandWithArgs(commandName, argsBeforeActive, matches[0], true)
+    return true
+  }
+
+  const prefix = getCommonPrefix(matches)
+  setCommandWithArgs(commandName, argsBeforeActive, prefix)
+  if (prefix === currentArg) {
+    await pushLine('info', matches.join('  '))
+  }
+  return true
+}
+
 const getPathCandidates = (commandName, currentArg = '') => {
   const raw = currentArg || ''
 
@@ -274,6 +311,7 @@ const getPathCandidates = (commandName, currentArg = '') => {
 const handleTabComplete = async () => {
   const raw = command.value
   const trimmed = raw.trimStart()
+  const hasTrailingSpace = /\s$/.test(trimmed)
   const parts = trimmed.split(/\s+/).filter(Boolean)
 
   if (!parts.length) {
@@ -281,7 +319,7 @@ const handleTabComplete = async () => {
     return
   }
 
-  if (parts.length === 1 && !trimmed.includes(' ')) {
+  if (parts.length === 1 && !hasTrailingSpace) {
     const current = parts[0].toLowerCase()
     const matches = availableCommands.filter(item => item.startsWith(current))
     if (!matches.length) return
@@ -302,68 +340,73 @@ const handleTabComplete = async () => {
   }
 
   const commandName = parts[0].toLowerCase()
-  const currentArg = parts.slice(1).join(' ').toLowerCase()
+  const args = parts.slice(1)
+  const argsBeforeActive = hasTrailingSpace ? args : args.slice(0, -1)
+  const activeArgIndex = hasTrailingSpace ? args.length : Math.max(args.length - 1, 0)
+  const currentArg = hasTrailingSpace ? '' : (args.at(-1) || '')
+
+  if (currentArg.startsWith('-')) {
+    const optionCandidates = getOptionCandidates(commandName)
+    if (optionCandidates.length) {
+      const completed = await completeArgument(commandName, argsBeforeActive, currentArg, optionCandidates)
+      if (completed) return
+    }
+  }
+
+  if (!currentArg && !argsBeforeActive.length) {
+    const optionCandidates = getOptionCandidates(commandName)
+    if (optionCandidates.length) {
+      const completed = await completeArgument(commandName, argsBeforeActive, currentArg, optionCandidates)
+      if (completed) return
+    }
+  }
 
   if (commandName === 'theme') {
     const themeCandidates = ['cyber']
-    const matches = themeCandidates.filter(item => item.startsWith(currentArg))
-    if (!matches.length) return
-    const next = matches.length === 1 ? matches[0] : getCommonPrefix(matches)
-    command.value = `theme ${next}`
-    if (matches.length === 1) command.value += ' '
+    await completeArgument(commandName, argsBeforeActive, currentArg, themeCandidates)
     return
   }
 
   if (commandName === 'open' || commandName === 'status') {
+    if (activeArgIndex > 0) return
     const candidates = commandName === 'status'
       ? ['all', ...getAppCandidates()]
       : getAppCandidates()
-    const matches = candidates.filter(item => item.startsWith(currentArg))
-    if (!matches.length) return
-
-    if (matches.length === 1) {
-      command.value = `${commandName} ${matches[0]} `
-      return
-    }
-
-    const prefix = getCommonPrefix(matches)
-    command.value = `${commandName} ${prefix}`
-    if (prefix === currentArg) {
-      await pushLine('info', matches.join('  '))
-    }
+    await completeArgument(commandName, argsBeforeActive, currentArg, candidates)
     return
   }
 
   if (commandName === 'cd' || commandName === 'ls' || commandName === 'cat' || commandName === 'head' || commandName === 'tail' || commandName === 'grep' || commandName === 'wc' || commandName === 'mkdir' || commandName === 'touch' || commandName === 'rm') {
-    const candidates = getPathCandidates(commandName, currentArg)
-    const matches = candidates.filter(item => item.startsWith(currentArg))
-    if (!matches.length) return
-
-    if (matches.length === 1) {
-      command.value = `${commandName} ${matches[0]} `
+    if ((commandName === 'head' || commandName === 'tail') && argsBeforeActive[0] === '-n' && activeArgIndex <= 1) {
       return
     }
 
-    const prefix = getCommonPrefix(matches)
-    command.value = `${commandName} ${prefix}`
-    if (prefix === currentArg) {
-      await pushLine('info', matches.join('  '))
+    if (commandName === 'wc' && argsBeforeActive[0] === '-l' && activeArgIndex === 0) {
+      return
     }
+
+    if (commandName === 'grep' && activeArgIndex === 0) return
+
+    if ((commandName === 'ls' || commandName === 'rm') && currentArg.startsWith('-')) return
+
+    const candidates = getPathCandidates(commandName, currentArg)
+    await completeArgument(commandName, argsBeforeActive, currentArg, candidates)
     return
   }
 
-  if (commandName === 'ping' || commandName === 'curl') {
-    const candidates = store.desktopApps.map(app => app.domain).filter(Boolean)
-    const matches = candidates.filter(item => item.startsWith(currentArg))
-    if (!matches.length) return
-
-    if (matches.length === 1) {
-      command.value = `${commandName} ${matches[0]} `
+  if (commandName === 'ping') {
+    if (argsBeforeActive.includes('-c') && activeArgIndex <= argsBeforeActive.indexOf('-c') + 1) {
       return
     }
+    const candidates = store.desktopApps.map(app => app.domain).filter(Boolean)
+    await completeArgument(commandName, argsBeforeActive, currentArg, candidates)
+    return
+  }
 
-    const prefix = getCommonPrefix(matches)
-    command.value = `${commandName} ${prefix}`
+  if (commandName === 'curl') {
+    if (activeArgIndex > 0 && currentArg.startsWith('-')) return
+    const candidates = store.desktopApps.map(app => app.domain).filter(Boolean)
+    await completeArgument(commandName, argsBeforeActive, currentArg, candidates)
   }
 }
 

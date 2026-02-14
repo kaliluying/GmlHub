@@ -4,14 +4,23 @@ import { ref } from 'vue'
 const createInitialDirectories = () => ({
   '/': ['home', 'etc', 'var', 'tmp'],
   '/home': ['gml'],
+  '/etc': [],
+  '/var': [],
+  '/tmp': [],
   '/home/gml': ['projects', 'notes.txt', 'todo.md', '.bashrc'],
   '/home/gml/projects': ['portal-ui', 'tools-api', 'wiki-core'],
+  '/home/gml/projects/portal-ui': ['README.md'],
+  '/home/gml/projects/tools-api': ['README.md'],
+  '/home/gml/projects/wiki-core': ['README.md'],
 })
 
 const createInitialFiles = () => ({
   '/home/gml/notes.txt': 'Portal MVP\n- desktop ui\n- launcher\n- fake terminal',
   '/home/gml/todo.md': '# TODO\n- health api aggregator\n- add auth\n- add audit log',
   '/home/gml/.bashrc': 'export TERM=xterm-256color\nalias ll="ls -la"',
+  '/home/gml/projects/portal-ui/README.md': '# portal-ui\nfrontend shell and desktop modules',
+  '/home/gml/projects/tools-api/README.md': '# tools-api\nmock services for terminal commands',
+  '/home/gml/projects/wiki-core/README.md': '# wiki-core\nknowledge base runtime',
 })
 
 export const useVirtualFsStore = defineStore('virtualFs', () => {
