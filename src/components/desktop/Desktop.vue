@@ -219,7 +219,7 @@
     <div class="desktop-workspace relative z-20 pt-14 md:pt-[4.1rem] px-4 pb-32 md:pb-36 md:px-10">
       <div class="desktop-main-grid">
         <div
-          class="desktop-icons grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-5 content-start"
+          class="desktop-icons grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 sm:gap-4 md:gap-5 content-start"
           :class="desktopIconGridClass"
         >
           <AppIcon
@@ -1154,7 +1154,7 @@ const changeWallpaper = () => {
 .desktop-icons {
   align-content: start;
   justify-items: start;
-  max-width: 860px;
+  width: 100%;
 }
 
 @media (min-width: 1280px) {
