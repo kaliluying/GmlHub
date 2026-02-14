@@ -19,7 +19,7 @@ export const useDesktopStore = defineStore('desktop', () => {
       domain: 'tools.gmlblog.top',
       status: 'online',
       updatedAt: '2026-02-10',
-      description: '实用工具集合',
+      description: 'Vue 3 + TS + Django DRF 工具集',
     },
     {
       id: 'wiki',
@@ -30,7 +30,7 @@ export const useDesktopStore = defineStore('desktop', () => {
       domain: 'wiki.gmlblog.top',
       status: 'online',
       updatedAt: '2026-02-09',
-      description: '个人知识管理',
+      description: 'Vue 3 + Django + PostgreSQL 知识库',
     },
     {
       id: 'vault',
@@ -41,7 +41,7 @@ export const useDesktopStore = defineStore('desktop', () => {
       domain: 'vault.gmlblog.top',
       status: 'online',
       updatedAt: '2026-02-08',
-      description: '安全密码管理',
+      description: 'FastAPI + PostgreSQL + Redis 密码管理',
     },
     {
       id: 'blog',
@@ -52,7 +52,7 @@ export const useDesktopStore = defineStore('desktop', () => {
       domain: 'blog.gmlblog.top',
       status: 'offline',
       updatedAt: '2026-02-11',
-      description: '技术博客',
+      description: 'Vue 3 + FastAPI + PostgreSQL AI 博客',
     },
     {
       id: 'github',
@@ -97,6 +97,98 @@ export const useDesktopStore = defineStore('desktop', () => {
       status: 'local',
       updatedAt: '2026-02-11',
       description: '系统设置',
+    },
+    {
+      id: 'profile',
+      name: '关于我',
+      icon: '👤',
+      color: '#5AC8FA',
+      url: null,
+      domain: 'profile.local',
+      status: 'local',
+      updatedAt: '2026-02-14',
+      description: '开发者：GML｜专注 AI 全栈产品与效率工具落地',
+      detailTitle: '个人简介',
+      details: [
+        '独立开发者，持续交付 Vue + Python 技术栈的线上产品。',
+        '近期项目覆盖工具集、知识库、密码管理与 AI 博客四条产品线。',
+        '偏好把复杂流程拆成可复用、可维护、可持续迭代的工程模块。',
+      ],
+      quickFacts: [
+        { label: '方向', value: 'AI 全栈 / 工具产品' },
+        { label: '地点', value: '中国 · 远程协作' },
+        { label: '主力后端', value: 'FastAPI / Django REST Framework' },
+        { label: '状态', value: '可接合作 / 技术交流' },
+      ],
+      actions: [
+        { id: 'profile-blog', label: '打开博客', type: 'link', value: 'https://blog.gmlblog.top' },
+        { id: 'profile-github', label: '打开 GitHub', type: 'link', value: 'https://github.com/kaliluying' },
+      ],
+    },
+    {
+      id: 'contact',
+      name: '联系方式',
+      icon: '📮',
+      color: '#FF2D55',
+      url: null,
+      domain: 'contact.local',
+      status: 'local',
+      updatedAt: '2026-02-14',
+      description: '邮箱：kaliluying@gmail.com｜GitHub：github.com/kaliluying',
+      detailTitle: '联系渠道',
+      details: [
+        '欢迎合作邀约、技术交流与问题反馈。',
+        '优先邮件联系，通常会在 24 小时内回复。',
+      ],
+      quickFacts: [
+        { label: '邮箱', value: 'kaliluying@gmail.com' },
+        { label: 'GitHub', value: 'github.com/kaliluying' },
+        { label: 'Bilibili', value: 'space.bilibili.com/671157361' },
+        { label: '沟通偏好', value: '邮件 > GitHub Issue / 私信' },
+      ],
+      actions: [
+        { id: 'contact-email-copy', label: '复制邮箱', type: 'copy', value: 'kaliluying@gmail.com' },
+        { id: 'contact-email-open', label: '写邮件', type: 'link', value: 'mailto:kaliluying@gmail.com' },
+        { id: 'contact-github-copy', label: '复制 GitHub', type: 'copy', value: 'https://github.com/kaliluying' },
+        { id: 'contact-github-open', label: '打开 GitHub', type: 'link', value: 'https://github.com/kaliluying' },
+        { id: 'contact-bilibili-open', label: '打开 Bilibili', type: 'link', value: 'https://space.bilibili.com/671157361' },
+      ],
+    },
+    {
+      id: 'stack',
+      name: '技术栈',
+      icon: '🧩',
+      color: '#30D158',
+      url: null,
+      domain: 'stack.local',
+      status: 'local',
+      updatedAt: '2026-02-14',
+      description: 'Vue 3 + TypeScript / FastAPI / Django / PostgreSQL / Redis',
+      detailTitle: '技术与项目证据',
+      details: [
+        '核心交付栈：Vue 3 + TypeScript + Vite，后端以 FastAPI 与 Django 双栈并行。',
+        '数据层以 PostgreSQL 为主，按场景使用 Redis 会话与异步访问能力。',
+        '在多项目中持续实践 Pinia、Vue Router、DRF、SQLAlchemy、Alembic 与 Pytest。',
+      ],
+      quickFacts: [
+        { label: '前端', value: 'Vue 3 / TypeScript / Vite / Pinia / Vue Router' },
+        { label: '后端', value: 'FastAPI / Django 5.2 / DRF / SQLAlchemy 2.0' },
+        { label: '数据与安全', value: 'PostgreSQL / Redis / asyncpg / cryptography' },
+        { label: '质量保障', value: 'Vitest / Pytest / Alembic / Docker Compose' },
+      ],
+      evidence: [
+        { id: 'ev-tools', name: 'MyTools / Tools', meta: 'Vue 3 + TS + Django DRF + Naive UI + FFmpeg', url: 'https://github.com/kaliluying/MyTools' },
+        { id: 'ev-wiki', name: 'knowledge-ai / 知识库', meta: 'Vue 3 + Django 5.2 + PostgreSQL 17 + TipTap + D3.js', url: 'https://github.com/kaliluying/knowledge-ai' },
+        { id: 'ev-vault', name: 'vault / 密码箱', meta: 'FastAPI + PostgreSQL + Redis + Jinja2 + cryptography', url: 'https://github.com/kaliluying/vault' },
+        { id: 'ev-blog', name: 'blog-ai / 博客', meta: 'Vue 3 + FastAPI + SQLAlchemy 2.0 + Alembic + Pytest', url: 'https://github.com/kaliluying/blog-ai' },
+      ],
+      actions: [
+        { id: 'stack-tools', label: '打开 Tools', type: 'link', value: 'https://tools.gmlblog.top' },
+        { id: 'stack-wiki', label: '打开知识库', type: 'link', value: 'https://wiki.gmlblog.top' },
+        { id: 'stack-vault', label: '打开密码箱', type: 'link', value: 'https://vault.gmlblog.top' },
+        { id: 'stack-blog', label: '打开博客', type: 'link', value: 'https://blog.gmlblog.top' },
+        { id: 'stack-github', label: '查看 GitHub', type: 'link', value: 'https://github.com/kaliluying' },
+      ],
     },
   ])
 
@@ -485,7 +577,8 @@ export const useDesktopStore = defineStore('desktop', () => {
   }
 
   const buildWindowFrame = (appId, index, size = { width: 900, height: 600 }) => {
-    if (typeof window !== 'undefined' && isCompactMobileViewport() && (appId === 'terminal' || appId === 'settings')) {
+    const mobileApps = ['terminal', 'settings', 'profile', 'contact', 'stack']
+    if (typeof window !== 'undefined' && isCompactMobileViewport() && mobileApps.includes(appId)) {
       const horizontalPadding = 8
       const topOffset = 48
       const bottomOffset = 88
@@ -538,6 +631,12 @@ export const useDesktopStore = defineStore('desktop', () => {
       appId: app.id,
       title: app.name,
       icon: app.icon,
+      description: app.description,
+      detailTitle: app.detailTitle,
+      details: app.details,
+      quickFacts: app.quickFacts,
+      evidence: app.evidence,
+      actions: app.actions,
       url: app.url,
       x: frame.x,
       y: frame.y,

@@ -40,6 +40,10 @@
       <TerminalPanel v-if="window.appId === 'terminal'" :window-id="window.id" />
       <SettingsPanel v-else-if="window.appId === 'settings'" />
       <TrashPanel v-else-if="window.appId === 'trash'" />
+      <PersonalInfoPanel
+        v-else-if="window.appId === 'profile' || window.appId === 'contact' || window.appId === 'stack'"
+        :window-data="window"
+      />
       <iframe
         v-else-if="window.url"
         :src="window.url"
@@ -50,7 +54,7 @@
         <div class="text-center">
           <div class="text-6xl mb-4">{{ window.icon }}</div>
           <p class="text-lg font-medium">{{ window.title }}</p>
-          <p class="text-sm opacity-70">此应用暂未配置 URL</p>
+          <p class="text-sm opacity-70">{{ window.description || '此应用暂未配置 URL' }}</p>
         </div>
       </div>
     </div>
@@ -70,6 +74,7 @@ import { useDesktopStore } from '../../stores/desktop.js'
 import TerminalPanel from './TerminalPanel.vue'
 import SettingsPanel from './SettingsPanel.vue'
 import TrashPanel from './TrashPanel.vue'
+import PersonalInfoPanel from './PersonalInfoPanel.vue'
 
 const props = defineProps({
   window: {
@@ -86,7 +91,8 @@ const resizeStart = ref({ x: 0, y: 0, width: 0, height: 0 })
 
 const isMobilePanel = computed(() => {
   if (typeof window === 'undefined') return false
-  return window.innerWidth < 768 && (props.window.appId === 'terminal' || props.window.appId === 'settings')
+  const mobileApps = ['terminal', 'settings', 'profile', 'contact', 'stack']
+  return window.innerWidth < 768 && mobileApps.includes(props.window.appId)
 })
 
 const windowStyle = computed(() => ({

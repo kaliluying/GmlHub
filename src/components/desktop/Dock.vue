@@ -2,10 +2,11 @@
   <div class="dock-container fixed left-1/2 -translate-x-1/2 z-50">
     <div
       ref="dockRef"
-      class="dock flex items-end gap-2.5 sm:gap-3 px-2.5 sm:px-4 pt-4 pb-2 sm:pb-2.5 rounded-2xl sm:rounded-3xl glass dock-shadow"
+      class="dock dock-surface flex items-end gap-2.5 sm:gap-3 px-3 sm:px-[1.125rem] pt-3.5 pb-2.5 sm:pb-3 rounded-3xl sm:rounded-[1.85rem] glass dock-shadow"
       :style="dockBoardStyle"
       @mousemove="handleDockMouseMove"
       @mouseleave="handleDockMouseLeave"
+      @scroll="handleDockScroll"
     >
       <div
         v-for="(app, index) in store.desktopApps"
@@ -13,6 +14,11 @@
         class="dock-item relative group"
         :ref="el => setIconRef(el, index)"
         @click="handleAppClick(app.id)"
+        @keydown.enter.prevent="handleAppClick(app.id)"
+        @keydown.space.prevent="handleAppClick(app.id)"
+        role="button"
+        tabindex="0"
+        :aria-label="`打开 ${app.name}`"
       >
         <div
           class="dock-icon rounded-xl flex items-center justify-center cursor-pointer border border-white/15"
@@ -38,6 +44,11 @@
         class="dock-item relative group"
         :ref="el => setIconRef(el, trashIndex)"
         @click="showTrash"
+        @keydown.enter.prevent="showTrash"
+        @keydown.space.prevent="showTrash"
+        role="button"
+        tabindex="0"
+        aria-label="打开废纸篓"
       >
       <div class="dock-icon rounded-xl flex items-center justify-center bg-white/10 border border-white/15 cursor-pointer" :class="dockIconClass" :style="getIconShellStyle(trashIndex)">
           <span :style="getIconStyle(trashIndex)">🗑️</span>
@@ -54,17 +65,22 @@
         </div>
       </div>
     </div>
+
+    <div v-show="canScrollLeft" class="dock-scroll-fade dock-scroll-fade-left" aria-hidden="true" />
+    <div v-show="canScrollRight" class="dock-scroll-fade dock-scroll-fade-right" aria-hidden="true" />
   </div>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useDesktopStore } from '../../stores/desktop.js'
 
 const store = useDesktopStore()
 const dockRef = ref(null)
 const mouseX = ref(null)
 const iconRefs = ref([])
+const canScrollLeft = ref(false)
+const canScrollRight = ref(false)
 const supportsHover = typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches
 
 const trashIndex = computed(() => store.desktopApps.length)
@@ -158,6 +174,40 @@ const handleDockMouseLeave = () => {
   mouseX.value = null
 }
 
+const updateDockScrollHints = () => {
+  if (typeof window === 'undefined' || !dockRef.value) {
+    canScrollLeft.value = false
+    canScrollRight.value = false
+    return
+  }
+
+  if (window.innerWidth >= 768) {
+    canScrollLeft.value = false
+    canScrollRight.value = false
+    return
+  }
+
+  const element = dockRef.value
+  const hasOverflow = element.scrollWidth - element.clientWidth > 2
+  if (!hasOverflow) {
+    canScrollLeft.value = false
+    canScrollRight.value = false
+    return
+  }
+
+  canScrollLeft.value = element.scrollLeft > 6
+  canScrollRight.value = element.scrollLeft + element.clientWidth < element.scrollWidth - 6
+}
+
+const syncDockScrollHints = () => {
+  if (typeof window === 'undefined') return
+  window.requestAnimationFrame(updateDockScrollHints)
+}
+
+const handleDockScroll = () => {
+  updateDockScrollHints()
+}
+
 const getIconShellStyle = (index) => {
   const { eased } = getInfluence(index)
   if (eased === 0) {
@@ -206,6 +256,24 @@ const handleAppClick = (appId) => {
 const showTrash = () => {
   store.openTrashWindow()
 }
+
+onMounted(() => {
+  syncDockScrollHints()
+  if (typeof window === 'undefined') return
+  window.addEventListener('resize', syncDockScrollHints)
+})
+
+onUnmounted(() => {
+  if (typeof window === 'undefined') return
+  window.removeEventListener('resize', syncDockScrollHints)
+})
+
+watch(
+  () => [store.desktopApps.length, store.settings.iconSize],
+  () => {
+    nextTick(syncDockScrollHints)
+  },
+)
 </script>
 
 <style scoped>
@@ -215,19 +283,43 @@ const showTrash = () => {
 }
 
 .dock-container {
-  bottom: max(0.75rem, env(safe-area-inset-bottom));
+  bottom: max(0.55rem, calc(env(safe-area-inset-bottom) * 0.3 + 0.12rem));
   width: fit-content;
   max-width: min(96vw, 1120px);
   overflow: visible;
 }
 
 .dock {
+  position: relative;
   overflow: visible;
   scrollbar-width: none;
   width: fit-content;
   max-width: 100%;
   margin: 0 auto;
   transition: transform 180ms cubic-bezier(0.22, 0.8, 0.22, 1);
+}
+
+.dock-surface::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0.08) 22%, rgba(255, 255, 255, 0) 44%),
+    radial-gradient(140% 110% at 50% 118%, rgba(2, 6, 23, 0.5) 0%, rgba(2, 6, 23, 0) 56%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.22) inset,
+    0 -1px 0 rgba(148, 163, 184, 0.15) inset;
+}
+
+.dock-surface::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(170deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 52%, rgba(255, 255, 255, 0) 100%);
 }
 
 .dock::-webkit-scrollbar {
@@ -252,6 +344,83 @@ const showTrash = () => {
 
 .tooltip {
   z-index: 100;
+}
+
+.dock-scroll-fade {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .dock-container {
+    left: 0;
+    right: 0;
+    transform: none;
+    width: 100%;
+    max-width: none;
+    padding: 0 0.5rem;
+    bottom: max(0.35rem, calc(env(safe-area-inset-bottom) * 0.18 + 0.12rem));
+  }
+
+  .dock {
+    width: 100%;
+    max-width: none;
+    overflow-x: auto;
+    overflow-y: visible;
+    justify-content: flex-start;
+    gap: 0.55rem;
+    padding: 0.8rem 0.65rem calc(0.55rem + env(safe-area-inset-bottom) * 0.2);
+    border-radius: 1rem;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .dock-item {
+    min-height: 3.1rem;
+    display: flex;
+    align-items: flex-end;
+  }
+
+  .dock-icon {
+    width: clamp(2.7rem, 10.8vw, 3rem);
+    height: clamp(2.7rem, 10.8vw, 3rem);
+    border-radius: 0.8rem;
+  }
+
+  .dock-icon > span {
+    font-size: clamp(1.18rem, 4.3vw, 1.3rem);
+  }
+
+  .dock-item:active .dock-icon {
+    transform: translateY(-2px) scale(0.97);
+  }
+
+  .dock-item:active .dock-icon > span {
+    transform: translateY(0) scale(0.95);
+  }
+
+  .tooltip {
+    display: none;
+  }
+
+  .dock-scroll-fade {
+    display: block;
+    position: absolute;
+    z-index: 60;
+    pointer-events: none;
+    top: 0.35rem;
+    bottom: max(0.35rem, env(safe-area-inset-bottom) * 0.12);
+    width: 1.1rem;
+    border-radius: 0.75rem;
+  }
+
+  .dock-scroll-fade-left {
+    left: 0.5rem;
+    background: linear-gradient(to right, rgba(8, 12, 22, 0.86), rgba(8, 12, 22, 0));
+  }
+
+  .dock-scroll-fade-right {
+    right: 0.5rem;
+    background: linear-gradient(to left, rgba(8, 12, 22, 0.86), rgba(8, 12, 22, 0));
+  }
 }
 
 @media (hover: none) {
