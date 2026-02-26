@@ -67,6 +67,17 @@ export const useDesktopStore = defineStore('desktop', () => {
       description: '代码仓库主页',
     },
     {
+      id: 'clipboard-history',
+      name: '剪贴板',
+      icon: '📋',
+      color: '#5856D6',
+      url: 'https://github.com/kaliluying/clipboard-history',
+      domain: 'github.com',
+      status: 'online',
+      updatedAt: '2026-02-26',
+      description: 'Tauri 剪贴板历史记录管理工具',
+    },
+    {
       id: 'bilibili',
       name: '哔哩哔哩',
       icon: '📺',

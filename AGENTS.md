@@ -27,6 +27,8 @@
 - 启动开发环境：`npm run dev`
 - 生产构建：`npm run build`
 - 本地预览构建产物：`npm run preview`
+- 当前的环境是Windows，建议在Windows环境下运行。
+- 使用powershell运行命令，避免使用cmd。
 
 ### 3.2 未配置但常被误用的命令
 
