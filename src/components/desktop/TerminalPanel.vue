@@ -653,7 +653,7 @@ const handleIfconfig = async () => {
 
 const handlePing = async (rawTarget) => {
   const args = parseArgs(rawTarget)
-  let host = 'tools.gmlblog.top'
+  let host = 'tools.gmlhub.top'
   let count = 3
 
   for (let index = 0; index < args.length; index += 1) {
@@ -688,7 +688,7 @@ const handlePing = async (rawTarget) => {
 
 const handleCurl = async (rawTarget) => {
   const args = parseArgs(rawTarget)
-  let url = 'https://tools.gmlblog.top/health'
+  let url = 'https://tools.gmlhub.top/health'
   let headOnly = false
 
   for (const arg of args) {

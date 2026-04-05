@@ -14,7 +14,7 @@ describe('desktop store', () => {
     const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
 
     store.openWindow('tools')
-    expect(openSpy).toHaveBeenCalledWith('https://tools.gmlblog.top', '_blank', 'noopener,noreferrer')
+    expect(openSpy).toHaveBeenCalledWith('https://tools.gmlhub.top', '_blank', 'noopener,noreferrer')
     expect(store.windows).toHaveLength(0)
 
     store.openWindow('terminal')

@@ -3,8 +3,6 @@
     class="desktop w-full h-full relative overflow-hidden"
     :style="desktopStyle"
     @contextmenu.prevent="showContextMenu"
-    @mousemove="handlePointerMove"
-    @mouseleave="resetPointer"
   >
     <transition name="boot-fade">
       <div v-if="showBootSequence" class="boot-sequence">
@@ -45,7 +43,6 @@
     />
     <div class="tech-beam beam-a" />
     <div class="tech-beam beam-b" />
-    <div class="cyber-pointer-glow" :style="pointerGlowStyle" />
     <div class="cyber-noise-layer" />
     <div v-if="store.settings.codeRainEnabled" class="cyber-code-rain">
       <span
@@ -320,7 +317,6 @@ import ContextMenu from './ContextMenu.vue'
 const store = useDesktopStore()
 const currentTime = ref('')
 const contextMenu = ref({ show: false, x: 0, y: 0 })
-const pointer = ref({ x: 50, y: 50, active: false })
 const launcherInput = ref(null)
 const launcher = ref({ open: false, query: '', selectedIndex: 0 })
 const dragState = ref({ draggedId: null, targetId: null })
@@ -579,7 +575,6 @@ const hasSeenBootSequence = () => {
   try {
     return window.localStorage.getItem(BOOT_SEEN_STORAGE_KEY) === '1'
   } catch (error) {
-    console.warn('读取开机动画状态失败', error)
     return false
   }
 }
@@ -590,7 +585,7 @@ const markBootSequenceSeen = () => {
   try {
     window.localStorage.setItem(BOOT_SEEN_STORAGE_KEY, '1')
   } catch (error) {
-    console.warn('保存开机动画状态失败', error)
+    // silent fail for non-critical boot state
   }
 }
 
@@ -717,7 +712,6 @@ const desktopStyle = computed(() => ({
   '--cyber-code-rgb': activePreset.value.codeRgb,
   '--cyber-fx-opacity': motionProfile.value.opacity,
   '--cyber-fx-speed': motionProfile.value.speed,
-  '--cyber-pointer-scale': motionProfile.value.pointer,
   '--cyber-fx-play-state': isPageVisible.value ? 'running' : 'paused',
 }))
 
@@ -739,15 +733,6 @@ const nodeStyle = (node) => ({
   animationDuration: node.duration,
 })
 
-const pointerGlowStyle = computed(() => {
-  const opacity = pointer.value.active ? 0.72 : 0.34
-  return {
-    '--pointer-x': `${pointer.value.x}%`,
-    '--pointer-y': `${pointer.value.y}%`,
-    opacity: opacity * motionProfile.value.pointer,
-  }
-})
-
 const codeColumnStyle = (column) => ({
   left: column.left,
   animationDelay: column.delay,
@@ -762,25 +747,6 @@ const bootParticleStyle = (particle) => ({
   animationDelay: particle.delay,
   animationDuration: particle.duration,
 })
-
-const handlePointerMove = (event) => {
-  const target = event.currentTarget
-  if (!target) return
-
-  const rect = target.getBoundingClientRect()
-  const x = ((event.clientX - rect.left) / rect.width) * 100
-  const y = ((event.clientY - rect.top) / rect.height) * 100
-
-  pointer.value = {
-    x: Math.min(100, Math.max(0, x)),
-    y: Math.min(100, Math.max(0, y)),
-    active: true,
-  }
-}
-
-const resetPointer = () => {
-  pointer.value.active = false
-}
 
 const resetDragState = () => {
   dragState.value = { draggedId: null, targetId: null }
@@ -979,8 +945,6 @@ const refreshDesktop = async () => {
   launcher.value.query = ''
   launcher.value.selectedIndex = 0
   closeLauncher()
-
-  pointer.value.active = false
 
   await store.checkServiceStatuses()
 }
@@ -1376,19 +1340,6 @@ const changeWallpaper = () => {
   filter: blur(18px);
   mix-blend-mode: screen;
   background: conic-gradient(from 160deg, rgba(var(--cyber-beam-rgb), 0) 0deg, rgba(var(--cyber-beam-rgb), 0.26) 36deg, rgba(var(--cyber-beam-rgb), 0) 96deg);
-}
-
-.cyber-pointer-glow {
-  position: absolute;
-  inset: -14%;
-  z-index: 6;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at var(--pointer-x) var(--pointer-y), rgba(var(--cyber-glow-a-rgb), 0.26) 0%, rgba(var(--cyber-glow-a-rgb), 0.07) 12%, rgba(var(--cyber-glow-a-rgb), 0) 30%),
-    radial-gradient(circle at calc(var(--pointer-x) + 6%) calc(var(--pointer-y) + 4%), rgba(var(--cyber-glow-b-rgb), 0.16) 0%, rgba(var(--cyber-glow-b-rgb), 0) 24%);
-  filter: blur(3px);
-  transform: scale(var(--cyber-pointer-scale, 1));
-  transition: opacity 300ms ease;
 }
 
 .cyber-noise-layer {
@@ -1972,10 +1923,6 @@ const changeWallpaper = () => {
   .code-column {
     font-size: 8px;
     width: 126px;
-  }
-
-  .cyber-pointer-glow {
-    display: none;
   }
 
   .status-panel {

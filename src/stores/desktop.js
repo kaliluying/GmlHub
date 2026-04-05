@@ -16,8 +16,8 @@ export const useDesktopStore = defineStore('desktop', () => {
       name: 'Tools',
       icon: '🛠️',
       color: '#FF9500',
-      url: 'https://tools.gmlblog.top',
-      domain: 'tools.gmlblog.top',
+      url: 'https://tools.gmlhub.top',
+      domain: 'tools.gmlhub.top',
       status: 'online',
       updatedAt: '2026-02-10',
       description: 'Vue 3 + TS + Django DRF 工具集',
@@ -27,8 +27,8 @@ export const useDesktopStore = defineStore('desktop', () => {
       name: '知识库',
       icon: '📚',
       color: '#007AFF',
-      url: 'https://wiki.gmlblog.top',
-      domain: 'wiki.gmlblog.top',
+      url: 'https://wiki.gmlhub.top',
+      domain: 'wiki.gmlhub.top',
       status: 'online',
       updatedAt: '2026-02-09',
       description: 'Vue 3 + Django + PostgreSQL 知识库',
@@ -38,8 +38,8 @@ export const useDesktopStore = defineStore('desktop', () => {
       name: '密码箱',
       icon: '🔐',
       color: '#34C759',
-      url: 'https://vault.gmlblog.top',
-      domain: 'vault.gmlblog.top',
+      url: 'https://vault.gmlhub.top',
+      domain: 'vault.gmlhub.top',
       status: 'online',
       updatedAt: '2026-02-08',
       description: 'FastAPI + PostgreSQL + Redis 密码管理',
@@ -49,8 +49,8 @@ export const useDesktopStore = defineStore('desktop', () => {
       name: '博客',
       icon: '📝',
       color: '#AF52DE',
-      url: 'https://blog.gmlblog.top',
-      domain: 'blog.gmlblog.top',
+      url: 'https://blog.gmlhub.top',
+      domain: 'blog.gmlhub.top',
       status: 'offline',
       updatedAt: '2026-02-11',
       description: 'Vue 3 + FastAPI + PostgreSQL AI 博客',
@@ -133,7 +133,7 @@ export const useDesktopStore = defineStore('desktop', () => {
         { label: '状态', value: '可接合作 / 技术交流' },
       ],
       actions: [
-        { id: 'profile-blog', label: '打开博客', type: 'link', value: 'https://blog.gmlblog.top' },
+        { id: 'profile-blog', label: '打开博客', type: 'link', value: 'https://blog.gmlhub.top' },
         { id: 'profile-github', label: '打开 GitHub', type: 'link', value: 'https://github.com/kaliluying' },
       ],
     },
@@ -195,10 +195,10 @@ export const useDesktopStore = defineStore('desktop', () => {
         { id: 'ev-blog', name: 'blog-ai / 博客', meta: 'Vue 3 + FastAPI + SQLAlchemy 2.0 + Alembic + Pytest', url: 'https://github.com/kaliluying/blog-ai' },
       ],
       actions: [
-        { id: 'stack-tools', label: '打开 Tools', type: 'link', value: 'https://tools.gmlblog.top' },
-        { id: 'stack-wiki', label: '打开知识库', type: 'link', value: 'https://wiki.gmlblog.top' },
-        { id: 'stack-vault', label: '打开密码箱', type: 'link', value: 'https://vault.gmlblog.top' },
-        { id: 'stack-blog', label: '打开博客', type: 'link', value: 'https://blog.gmlblog.top' },
+        { id: 'stack-tools', label: '打开 Tools', type: 'link', value: 'https://tools.gmlhub.top' },
+        { id: 'stack-wiki', label: '打开知识库', type: 'link', value: 'https://wiki.gmlhub.top' },
+        { id: 'stack-vault', label: '打开密码箱', type: 'link', value: 'https://vault.gmlhub.top' },
+        { id: 'stack-blog', label: '打开博客', type: 'link', value: 'https://blog.gmlhub.top' },
         { id: 'stack-github', label: '查看 GitHub', type: 'link', value: 'https://github.com/kaliluying' },
       ],
     },
@@ -658,6 +658,7 @@ export const useDesktopStore = defineStore('desktop', () => {
     }
 
     const frame = buildWindowFrame(appId, windows.value.length)
+    const newZIndex = ++maxZIndex.value
     const newWindow = {
       id: `window-${Date.now()}`,
       appId: app.id,
@@ -674,91 +675,121 @@ export const useDesktopStore = defineStore('desktop', () => {
       y: frame.y,
       width: frame.width,
       height: frame.height,
-      zIndex: ++maxZIndex.value,
+      zIndex: newZIndex,
       minimized: false,
       maximized: false,
       focused: true,
     }
 
-    windows.value.forEach(w => w.focused = false)
-    windows.value.push(newWindow)
+    windows.value = [
+      ...windows.value.map(w => ({ ...w, focused: false })),
+      newWindow,
+    ]
     activeWindowId.value = newWindow.id
     recordAppLaunch(appId)
   }
 
   const closeWindow = (windowId) => {
-    const index = windows.value.findIndex(w => w.id === windowId)
-    if (index > -1) {
-      windows.value.splice(index, 1)
-      if (activeWindowId.value === windowId) {
-        const remaining = windows.value.filter(w => !w.minimized)
-        activeWindowId.value = remaining.length > 0 ? remaining[remaining.length - 1].id : null
-        if (remaining.length > 0) remaining[remaining.length - 1].focused = true
+    const closingWindow = windows.value.find(w => w.id === windowId)
+    if (!closingWindow) return
+
+    const wasActive = activeWindowId.value === windowId
+    windows.value = windows.value.filter(w => w.id !== windowId)
+
+    if (wasActive) {
+      const remaining = windows.value.filter(w => !w.minimized)
+      if (remaining.length > 0) {
+        const lastWindow = remaining[remaining.length - 1]
+        activeWindowId.value = lastWindow.id
+        const idx = windows.value.findIndex(w => w.id === lastWindow.id)
+        if (idx > -1) {
+          windows.value[idx] = { ...windows.value[idx], focused: true }
+        }
+      } else {
+        activeWindowId.value = null
       }
     }
   }
 
   const minimizeWindow = (windowId) => {
-    const window = windows.value.find(w => w.id === windowId)
-    if (window) {
-      window.minimized = true
-      window.focused = false
+    const index = windows.value.findIndex(w => w.id === windowId)
+    if (index < 0) return
+
+    const wasActive = activeWindowId.value === windowId
+    windows.value[index] = { ...windows.value[index], minimized: true, focused: false }
+
+    if (wasActive) {
       const remaining = windows.value.filter(w => !w.minimized)
-      activeWindowId.value = remaining.length > 0 ? remaining[remaining.length - 1].id : null
-      if (remaining.length > 0) remaining[remaining.length - 1].focused = true
+      if (remaining.length > 0) {
+        const lastWindow = remaining[remaining.length - 1]
+        activeWindowId.value = lastWindow.id
+        const idx = windows.value.findIndex(w => w.id === lastWindow.id)
+        if (idx > -1) {
+          windows.value[idx] = { ...windows.value[idx], focused: true }
+        }
+      } else {
+        activeWindowId.value = null
+      }
     }
   }
 
   const maximizeWindow = (windowId) => {
-    const currentWindow = windows.value.find(w => w.id === windowId)
-    if (currentWindow) {
-      if (currentWindow.maximized) {
-        currentWindow.maximized = false
-        currentWindow.x = currentWindow.prevX || 100
-        currentWindow.y = currentWindow.prevY || 100
-        currentWindow.width = currentWindow.prevWidth || 900
-        currentWindow.height = currentWindow.prevHeight || 600
-      } else {
-        currentWindow.prevX = currentWindow.x
-        currentWindow.prevY = currentWindow.y
-        currentWindow.prevWidth = currentWindow.width
-        currentWindow.prevHeight = currentWindow.height
-        currentWindow.maximized = true
-        currentWindow.x = 0
-        currentWindow.y = 0
-        if (typeof window !== 'undefined') {
-          currentWindow.width = window.innerWidth
-          currentWindow.height = window.innerHeight
-        }
+    const index = windows.value.findIndex(w => w.id === windowId)
+    if (index < 0) return
+
+    const currentWindow = windows.value[index]
+    if (currentWindow.maximized) {
+      windows.value[index] = {
+        ...currentWindow,
+        maximized: false,
+        x: currentWindow.prevX || 100,
+        y: currentWindow.prevY || 100,
+        width: currentWindow.prevWidth || 900,
+        height: currentWindow.prevHeight || 600,
+      }
+    } else {
+      windows.value[index] = {
+        ...currentWindow,
+        prevX: currentWindow.x,
+        prevY: currentWindow.y,
+        prevWidth: currentWindow.width,
+        prevHeight: currentWindow.height,
+        maximized: true,
+        x: 0,
+        y: 0,
+        width: typeof window !== 'undefined' ? window.innerWidth : 900,
+        height: typeof window !== 'undefined' ? window.innerHeight : 600,
       }
     }
   }
 
   const bringToFront = (windowId) => {
-    const window = windows.value.find(w => w.id === windowId)
-    if (window) {
-      windows.value.forEach(w => w.focused = false)
-      window.zIndex = ++maxZIndex.value
-      window.focused = true
-      window.minimized = false
-      activeWindowId.value = windowId
-    }
+    const index = windows.value.findIndex(w => w.id === windowId)
+    if (index < 0) return
+
+    windows.value = windows.value.map((w, i) => {
+      if (i === index) {
+        return { ...w, zIndex: ++maxZIndex.value, focused: true, minimized: false }
+      }
+      return { ...w, focused: false }
+    })
+    activeWindowId.value = windowId
   }
 
   const updateWindowPosition = (windowId, x, y) => {
-    const window = windows.value.find(w => w.id === windowId)
-    if (window && !window.maximized) {
-      window.x = x
-      window.y = y
-    }
+    const index = windows.value.findIndex(w => w.id === windowId)
+    if (index < 0) return
+    const currentWindow = windows.value[index]
+    if (currentWindow.maximized) return
+    windows.value[index] = { ...currentWindow, x, y }
   }
 
   const updateWindowSize = (windowId, width, height) => {
-    const window = windows.value.find(w => w.id === windowId)
-    if (window && !window.maximized) {
-      window.width = width
-      window.height = height
-    }
+    const index = windows.value.findIndex(w => w.id === windowId)
+    if (index < 0) return
+    const currentWindow = windows.value[index]
+    if (currentWindow.maximized) return
+    windows.value[index] = { ...currentWindow, width, height }
   }
 
   const setShowDock = (enabled) => {

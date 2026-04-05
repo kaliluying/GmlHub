@@ -6,7 +6,7 @@
 ## 1. 项目概览
 
 - 技术栈：Vue 3 + Vite + Pinia + Tailwind CSS + PostCSS。
-- 包管理：npm（存在 `package-lock.json`）。
+- 包管理：pnpm（使用 `pnpm-lock.yaml`）。
 - 代码形态：以 JavaScript + Vue SFC（`<script setup>`）为主，未启用 TypeScript。
 - 当前状态：仓库包含 UI 原型代码，测试与 lint 尚未接入。
 
@@ -24,28 +24,24 @@
 
 ### 3.1 已配置命令（直接可用）
 
-- 启动开发环境：`npm run dev`
-- 生产构建：`npm run build`
-- 本地预览构建产物：`npm run preview`
-- 当前的环境是Windows，建议在Windows环境下运行。
-- 使用powershell运行命令，避免使用cmd。
+- 启动开发环境：`pnpm run dev`
+- 生产构建：`pnpm run build`
+- 本地预览构建产物：`pnpm run preview`
+- 运行测试：`pnpm run test`
 
 ### 3.2 未配置但常被误用的命令
 
-- `npm run lint`：当前不存在（`package.json` 无 `lint` script）。
-- `npm test` / `npm run test`：当前不存在（`package.json` 无 `test` script）。
+- `pnpm run lint`：当前不存在（`package.json` 无 `lint` script）。
 
 ### 3.3 单测执行（重点）
 
-- 当前仓库未接入测试框架（无 Vitest/Jest 配置、无 `src/**/*.{test,spec}.*` 测试文件）。
-- 结论：当前“运行单个测试”命令不可用。
-- 若后续引入 Vitest，建议统一 script：
-  - `"test": "vitest"`
-  - `"test:watch": "vitest --watch"`
-  - `"test:run": "vitest run"`
-  - `"test:one": "vitest run"`（通过追加文件路径执行单测）
-- Vitest 单文件示例：`npm run test:one -- src/stores/desktop.test.js`
-- Vitest 单用例示例：`npm run test:one -- src/stores/desktop.test.js -t "openWindow"`
+- Vitest 已接入，命令：
+  - `”test”: “vitest”`
+  - `”test:watch”: “vitest --watch”`
+  - `”test:run”: “vitest run”`
+  - `”test:one”: “vitest run”`（通过追加文件路径执行单测）
+- Vitest 单文件示例：`pnpm run test:one -- src/stores/desktop.test.js`
+- Vitest 单用例示例：`pnpm run test:one -- src/stores/desktop.test.js -t “openWindow”`
 
 ## 4. 代码风格基线（基于现有代码）
 
@@ -117,9 +113,9 @@
 
 ## 7. 验证清单（每次改动后）
 
-- 能运行：`npm run dev`
-- 能构建：`npm run build`
-- 可预览：`npm run preview`（如需要验收生产构建）
+- 能运行：`pnpm run dev`
+- 能构建：`pnpm run build`
+- 可预览：`pnpm run preview`（如需要验收生产构建）
 - 若仅改样式：至少检查桌面主界面、Dock、Window 三个区域未明显回归。
 
 ## 8. Cursor / Copilot / AGENTS 规则状态
