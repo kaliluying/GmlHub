@@ -1,5 +1,5 @@
 <template>
-  <div class="dock-container fixed left-1/2 -translate-x-1/2 z-50">
+  <div class="dock-container fixed left-1/2 z-50">
     <div
       ref="dockRef"
       class="dock dock-surface flex items-end gap-2.5 sm:gap-3 px-3 sm:px-[1.125rem] pt-3 pb-2 sm:pb-2.5 rounded-[1.55rem] sm:rounded-[1.8rem] dock-shadow"
@@ -25,7 +25,9 @@
           :class="dockIconClass"
           :style="{ backgroundColor: app.color, ...getIconShellStyle(index) }"
         >
-          <span class="text-white drop-shadow-md" :style="getIconStyle(index)">{{ app.icon }}</span>
+          <span class="dock-glyph" :style="getIconStyle(index)">
+            <IconGlyph :name="app.id" :size="store.settings.iconSize === 'large' ? 30 : 24" />
+          </span>
         </div>
 
         <div
@@ -51,7 +53,9 @@
         aria-label="打开废纸篓"
       >
       <div class="dock-icon dock-trash rounded-[1.15rem] flex items-center justify-center border border-white/20 cursor-pointer" :class="dockIconClass" :style="getIconShellStyle(trashIndex)">
-          <span :style="getIconStyle(trashIndex)">🗑️</span>
+          <span class="dock-glyph" :style="getIconStyle(trashIndex)">
+            <IconGlyph name="trash" :size="store.settings.iconSize === 'large' ? 30 : 24" />
+          </span>
         </div>
         <div class="tooltip dock-tooltip absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1 rounded-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
           废纸篓
@@ -76,6 +80,7 @@
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useDesktopStore } from '../../stores/desktop.js'
+import IconGlyph from './IconGlyph.vue'
 
 const store = useDesktopStore()
 const dockRef = ref(null)
@@ -247,7 +252,7 @@ const isAppOpen = (appId) => {
 }
 
 const handleAppClick = (appId) => {
-  const openWindow = store.windows.find(w => w.appId === appId && !w.minimized)
+  const openWindow = store.windows.find(w => w.appId === appId)
   if (openWindow) {
     store.bringToFront(openWindow.id)
   } else {
@@ -288,6 +293,7 @@ watch(
   bottom: max(0.55rem, calc(env(safe-area-inset-bottom) * 0.3 + 0.12rem));
   width: fit-content;
   max-width: min(96vw, 1120px);
+  transform: translateX(-50%);
   overflow: visible;
 }
 
@@ -339,8 +345,19 @@ watch(
   will-change: transform;
 }
 
+.dock-glyph {
+  color: rgba(242, 248, 255, 0.96);
+  filter: drop-shadow(0 3px 5px rgba(2, 8, 18, 0.36));
+}
+
 .dock-item {
   transition: transform 170ms cubic-bezier(0.22, 0.8, 0.22, 1);
+}
+
+.dock-item:focus-visible {
+  outline: 2px solid rgba(156, 231, 255, 0.94);
+  outline-offset: 4px;
+  border-radius: 1rem;
 }
 
 .dock-icon {
@@ -507,6 +524,103 @@ watch(
 @media (hover: none) {
   .dock-icon > span {
     transition: transform 120ms ease-out;
+  }
+}
+
+/* Liquid glass dock */
+.dock {
+  border-color: rgba(255, 255, 255, 0.78);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(241, 247, 255, 0.42) 58%, rgba(225, 235, 248, 0.38)),
+    rgba(245, 249, 255, 0.48);
+  box-shadow: 0 26px 60px rgba(79, 99, 132, 0.2), 0 2px 0 rgba(255, 255, 255, 0.86) inset;
+  backdrop-filter: blur(28px) saturate(170%);
+  -webkit-backdrop-filter: blur(28px) saturate(170%);
+}
+
+.dock-surface::before {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.16) 42%, rgba(255, 255, 255, 0) 68%);
+  box-shadow: 0 2px 0 rgba(255, 255, 255, 0.8) inset, 0 -1px 0 rgba(131, 151, 181, 0.12) inset;
+}
+
+.dock-surface::after {
+  background: radial-gradient(125% 100% at 50% 112%, rgba(97, 123, 163, 0.16) 0%, rgba(97, 123, 163, 0) 56%);
+}
+
+.dock-icon {
+  border-color: rgba(255, 255, 255, 0.7);
+  filter: saturate(0.9);
+  box-shadow: 0 10px 22px rgba(70, 91, 124, 0.2), 0 2px 0 rgba(255, 255, 255, 0.52) inset;
+}
+
+.dock-icon::before {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.12) 44%, rgba(255, 255, 255, 0) 76%);
+}
+
+.dock-glyph {
+  color: rgba(255, 255, 255, 0.96);
+  filter: drop-shadow(0 2px 4px rgba(30, 48, 78, 0.28));
+}
+
+.dock-trash {
+  border-color: rgba(255, 255, 255, 0.76);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(216, 227, 242, 0.6));
+}
+
+.dock-divider {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(132, 153, 183, 0.28));
+}
+
+.dock-open-indicator {
+  background: #5d7fc2;
+  box-shadow: 0 0 0 0.2rem rgba(93, 127, 194, 0.12);
+}
+
+.dock-tooltip {
+  border-color: rgba(255, 255, 255, 0.76);
+  background: rgba(248, 251, 255, 0.84);
+  color: #26334a;
+  box-shadow: 0 12px 24px rgba(70, 91, 124, 0.16);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.dock-trash-badge {
+  border-color: rgba(255, 255, 255, 0.78);
+  background: linear-gradient(180deg, #e98292, #c85e6d);
+  box-shadow: 0 5px 12px rgba(200, 94, 109, 0.24);
+}
+
+.dock-reflection {
+  background: radial-gradient(50% 100% at 50% 0%, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0) 100%);
+}
+
+.dock-item:focus-visible {
+  outline-color: rgba(91, 131, 206, 0.82);
+}
+
+@media (max-width: 767px) {
+  .dock {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(241, 247, 255, 0.5)),
+      rgba(245, 249, 255, 0.64);
+    border-radius: 1.25rem;
+  }
+
+  .dock-scroll-fade-left {
+    background: linear-gradient(to right, rgba(228, 236, 247, 0.9), rgba(228, 236, 247, 0));
+  }
+
+  .dock-scroll-fade-right {
+    background: linear-gradient(to left, rgba(228, 236, 247, 0.9), rgba(228, 236, 247, 0));
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .dock {
+    background: #f8fafc;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 }
 </style>

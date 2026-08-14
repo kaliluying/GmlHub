@@ -1,210 +1,16 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
+import { getInitialApps } from '../config/apps.js'
+import { createDefaultSettings, normalizeSettings } from '../config/settings.js'
+import {
+  loadPortalState as readPortalState,
+  savePortalState as writePortalState,
+} from '../services/persistence.js'
+
+const MOBILE_WINDOW_APPS = new Set(['terminal', 'settings', 'profile', 'contact', 'stack', 'project'])
 
 export const useDesktopStore = defineStore('desktop', () => {
-  const PINNED_APPS_STORAGE_KEY = 'desktop.pinnedApps'
-  const RECENT_APPS_STORAGE_KEY = 'desktop.recentApps'
-  const SETTINGS_STORAGE_KEY = 'desktop.settings'
-  const TRASHED_APPS_STORAGE_KEY = 'desktop.trashedApps'
-  const REMOVED_APPS_STORAGE_KEY = 'desktop.removedApps'
-  const APP_ORDER_STORAGE_KEY = 'desktop.appOrder'
-
-  // 应用配置
-  const apps = ref([
-    {
-      id: 'tools',
-      name: 'Tools',
-      icon: '🛠️',
-      color: '#FF9500',
-      url: 'https://tools.gmlhub.top',
-      domain: 'tools.gmlhub.top',
-      status: 'online',
-      updatedAt: '2026-02-10',
-      description: 'Vue 3 + TS + Django DRF 工具集',
-    },
-    {
-      id: 'wiki',
-      name: '知识库',
-      icon: '📚',
-      color: '#007AFF',
-      url: 'https://wiki.gmlhub.top',
-      domain: 'wiki.gmlhub.top',
-      status: 'online',
-      updatedAt: '2026-02-09',
-      description: 'Vue 3 + Django + PostgreSQL 知识库',
-    },
-    {
-      id: 'vault',
-      name: '密码箱',
-      icon: '🔐',
-      color: '#34C759',
-      url: 'https://vault.gmlhub.top',
-      domain: 'vault.gmlhub.top',
-      status: 'online',
-      updatedAt: '2026-02-08',
-      description: 'FastAPI + PostgreSQL + Redis 密码管理',
-    },
-    {
-      id: 'blog',
-      name: '博客',
-      icon: '📝',
-      color: '#AF52DE',
-      url: 'https://blog.gmlhub.top',
-      domain: 'blog.gmlhub.top',
-      status: 'offline',
-      updatedAt: '2026-02-11',
-      description: 'Vue 3 + FastAPI + PostgreSQL AI 博客',
-    },
-    {
-      id: 'github',
-      name: 'GitHub',
-      icon: '🐙',
-      color: '#24292f',
-      url: 'https://github.com/kaliluying',
-      domain: 'github.com',
-      status: 'online',
-      updatedAt: '2026-02-11',
-      description: '代码仓库主页',
-    },
-    {
-      id: 'clipboard-history',
-      name: '剪贴板',
-      icon: '📋',
-      color: '#5856D6',
-      url: 'https://github.com/kaliluying/clipboard-history',
-      domain: 'github.com',
-      status: 'online',
-      updatedAt: '2026-02-26',
-      description: 'Tauri 剪贴板历史记录管理工具',
-    },
-    {
-      id: 'bilibili',
-      name: '哔哩哔哩',
-      icon: '📺',
-      color: '#00A1D6',
-      url: 'https://space.bilibili.com/671157361',
-      domain: 'space.bilibili.com',
-      status: 'online',
-      updatedAt: '2026-02-11',
-      description: 'B站空间主页',
-    },
-    {
-      id: 'terminal',
-      name: '终端',
-      icon: '>_',
-      color: '#000000',
-      url: null,
-      domain: 'terminal.local',
-      status: 'local',
-      updatedAt: '2026-02-10',
-      description: '命令行终端',
-    },
-    {
-      id: 'settings',
-      name: '设置',
-      icon: '⚙️',
-      color: '#8E8E93',
-      url: null,
-      domain: 'settings.local',
-      status: 'local',
-      updatedAt: '2026-02-11',
-      description: '系统设置',
-    },
-    {
-      id: 'profile',
-      name: '关于我',
-      icon: '👤',
-      color: '#5AC8FA',
-      url: null,
-      domain: 'profile.local',
-      status: 'local',
-      updatedAt: '2026-02-14',
-      description: '开发者：GML｜专注 AI 全栈产品与效率工具落地',
-      detailTitle: '个人简介',
-      details: [
-        '独立开发者，持续交付 Vue + Python 技术栈的线上产品。',
-        '近期项目覆盖工具集、知识库、密码管理与 AI 博客四条产品线。',
-        '偏好把复杂流程拆成可复用、可维护、可持续迭代的工程模块。',
-      ],
-      quickFacts: [
-        { label: '方向', value: 'AI 全栈 / 工具产品' },
-        { label: '地点', value: '中国 · 远程协作' },
-        { label: '主力后端', value: 'FastAPI / Django REST Framework' },
-        { label: '状态', value: '可接合作 / 技术交流' },
-      ],
-      actions: [
-        { id: 'profile-blog', label: '打开博客', type: 'link', value: 'https://blog.gmlhub.top' },
-        { id: 'profile-github', label: '打开 GitHub', type: 'link', value: 'https://github.com/kaliluying' },
-      ],
-    },
-    {
-      id: 'contact',
-      name: '联系方式',
-      icon: '📮',
-      color: '#FF2D55',
-      url: null,
-      domain: 'contact.local',
-      status: 'local',
-      updatedAt: '2026-02-14',
-      description: '邮箱：kaliluying@gmail.com｜GitHub：github.com/kaliluying',
-      detailTitle: '联系渠道',
-      details: [
-        '欢迎合作邀约、技术交流与问题反馈。',
-        '优先邮件联系，通常会在 24 小时内回复。',
-      ],
-      quickFacts: [
-        { label: '邮箱', value: 'kaliluying@gmail.com' },
-        { label: 'GitHub', value: 'github.com/kaliluying' },
-        { label: 'Bilibili', value: 'space.bilibili.com/671157361' },
-        { label: '沟通偏好', value: '邮件 > GitHub Issue / 私信' },
-      ],
-      actions: [
-        { id: 'contact-email-copy', label: '复制邮箱', type: 'copy', value: 'kaliluying@gmail.com' },
-        { id: 'contact-email-open', label: '写邮件', type: 'link', value: 'mailto:kaliluying@gmail.com' },
-        { id: 'contact-github-copy', label: '复制 GitHub', type: 'copy', value: 'https://github.com/kaliluying' },
-        { id: 'contact-github-open', label: '打开 GitHub', type: 'link', value: 'https://github.com/kaliluying' },
-        { id: 'contact-bilibili-open', label: '打开 Bilibili', type: 'link', value: 'https://space.bilibili.com/671157361' },
-      ],
-    },
-    {
-      id: 'stack',
-      name: '技术栈',
-      icon: '🧩',
-      color: '#30D158',
-      url: null,
-      domain: 'stack.local',
-      status: 'local',
-      updatedAt: '2026-02-14',
-      description: 'Vue 3 + TypeScript / FastAPI / Django / PostgreSQL / Redis',
-      detailTitle: '技术与项目证据',
-      details: [
-        '核心交付栈：Vue 3 + TypeScript + Vite，后端以 FastAPI 与 Django 双栈并行。',
-        '数据层以 PostgreSQL 为主，按场景使用 Redis 会话与异步访问能力。',
-        '在多项目中持续实践 Pinia、Vue Router、DRF、SQLAlchemy、Alembic 与 Pytest。',
-      ],
-      quickFacts: [
-        { label: '前端', value: 'Vue 3 / TypeScript / Vite / Pinia / Vue Router' },
-        { label: '后端', value: 'FastAPI / Django 5.2 / DRF / SQLAlchemy 2.0' },
-        { label: '数据与安全', value: 'PostgreSQL / Redis / asyncpg / cryptography' },
-        { label: '质量保障', value: 'Vitest / Pytest / Alembic / Docker Compose' },
-      ],
-      evidence: [
-        { id: 'ev-tools', name: 'MyTools / Tools', meta: 'Vue 3 + TS + Django DRF + Naive UI + FFmpeg', url: 'https://github.com/kaliluying/MyTools' },
-        { id: 'ev-wiki', name: 'knowledge-ai / 知识库', meta: 'Vue 3 + Django 5.2 + PostgreSQL 17 + TipTap + D3.js', url: 'https://github.com/kaliluying/knowledge-ai' },
-        { id: 'ev-vault', name: 'vault / 密码箱', meta: 'FastAPI + PostgreSQL + Redis + Jinja2 + cryptography', url: 'https://github.com/kaliluying/vault' },
-        { id: 'ev-blog', name: 'blog-ai / 博客', meta: 'Vue 3 + FastAPI + SQLAlchemy 2.0 + Alembic + Pytest', url: 'https://github.com/kaliluying/blog-ai' },
-      ],
-      actions: [
-        { id: 'stack-tools', label: '打开 Tools', type: 'link', value: 'https://tools.gmlhub.top' },
-        { id: 'stack-wiki', label: '打开知识库', type: 'link', value: 'https://wiki.gmlhub.top' },
-        { id: 'stack-vault', label: '打开密码箱', type: 'link', value: 'https://vault.gmlhub.top' },
-        { id: 'stack-blog', label: '打开博客', type: 'link', value: 'https://blog.gmlhub.top' },
-        { id: 'stack-github', label: '查看 GitHub', type: 'link', value: 'https://github.com/kaliluying' },
-      ],
-    },
-  ])
-
-  // 窗口状态
+  const apps = ref(getInitialApps())
   const windows = ref([])
   const activeWindowId = ref(null)
   const maxZIndex = ref(100)
@@ -214,40 +20,31 @@ export const useDesktopStore = defineStore('desktop', () => {
   const removedAppIds = ref([])
   const isMonitoringStatus = ref(false)
   const lastStatusCheckAt = ref(null)
+  const settings = ref(createDefaultSettings())
 
   let statusMonitorTimer = null
+  let statusMonitorController = null
+  let windowSequence = 0
 
-  // 桌面设置
-  const settings = ref({
-    wallpaper: 'deep-net',
-    wallpaperColor: '#1a1a2e',
-    showDock: true,
-    dockPosition: 'bottom',
-    iconSize: 'medium',
-    motionLevel: 'medium',
-    codeRainEnabled: true,
-    dockAnimationLevel: 'medium',
-    terminalFontSize: 'medium',
-    terminalHistoryLimit: 100,
-    terminalEasterEggsEnabled: true,
-    autoStartMonitoring: true,
-    statusMonitorIntervalMs: 45000,
-  })
+  const openWindows = computed(() => windows.value.filter(window => !window.minimized))
+  const minimizedWindows = computed(() => windows.value.filter(window => window.minimized))
 
-  // 计算属性
-  const openWindows = computed(() => windows.value.filter(w => !w.minimized))
-  const minimizedWindows = computed(() => windows.value.filter(w => w.minimized))
   const serviceSummary = computed(() => {
-    const remoteApps = apps.value.filter(app => app.url)
-    const online = remoteApps.filter(app => app.status === 'online').length
-    const offline = remoteApps.filter(app => app.status === 'offline').length
-    const local = apps.value.filter(app => app.status === 'local').length
+    const remoteApps = apps.value.filter(app => app.launchMode === 'external' && app.url)
+    const reachable = remoteApps.filter(app => app.status === 'reachable').length
+    const unreachable = remoteApps.filter(app => app.status === 'unreachable').length
+    const unknown = remoteApps.filter(app => app.status === 'unknown').length
+    const local = apps.value.filter(app => app.launchMode === 'internal').length
 
     return {
-      online,
-      offline,
+      reachable,
+      unreachable,
+      unknown,
       local,
       total: remoteApps.length,
+      // Compatibility aliases for existing panels and terminal commands.
+      online: reachable,
+      offline: unreachable,
     }
   })
 
@@ -267,206 +64,288 @@ export const useDesktopStore = defineStore('desktop', () => {
       .filter(app => !trashedAppIds.value.includes(app.id) && !removedAppIds.value.includes(app.id))
   })
 
-  const desktopApps = computed(() => {
-    return apps.value.filter(app => !trashedAppIds.value.includes(app.id) && !removedAppIds.value.includes(app.id))
-  })
+  const desktopApps = computed(() => apps.value.filter(app => (
+    !trashedAppIds.value.includes(app.id) && !removedAppIds.value.includes(app.id)
+  )))
 
-  const trashedApps = computed(() => {
-    return apps.value.filter(app => trashedAppIds.value.includes(app.id))
-  })
-
+  const trashedApps = computed(() => apps.value.filter(app => trashedAppIds.value.includes(app.id)))
   const trashCount = computed(() => trashedAppIds.value.length)
 
-  const readStorageList = (key) => {
-    if (typeof window === 'undefined') return []
+  const nextWindowId = () => {
+    windowSequence += 1
+    return `window-${Date.now()}-${windowSequence}`
+  }
 
-    try {
-      const raw = window.localStorage.getItem(key)
-      if (!raw) return []
-      const parsed = JSON.parse(raw)
-      return Array.isArray(parsed) ? parsed : []
-    } catch {
-      return []
+  const isCompactMobileViewport = () => {
+    if (typeof window === 'undefined') return false
+    return window.innerWidth < 768
+  }
+
+  const getViewportBounds = () => {
+    if (typeof window === 'undefined') {
+      return {
+        left: 20,
+        top: 56,
+        right: 1260,
+        bottom: 704,
+      }
+    }
+
+    const mobile = isCompactMobileViewport()
+    const horizontalPadding = mobile ? 8 : 20
+    const topOffset = mobile ? 48 : 56
+    const bottomOffset = settings.value.showDock ? (mobile ? 88 : 96) : (mobile ? 16 : 20)
+    const viewportWidth = Math.max(1, window.innerWidth)
+    const viewportHeight = Math.max(1, window.innerHeight)
+
+    return {
+      left: horizontalPadding,
+      top: topOffset,
+      right: Math.max(horizontalPadding, viewportWidth - horizontalPadding),
+      bottom: Math.max(topOffset + 1, viewportHeight - bottomOffset),
     }
   }
 
-  const writeStorageList = (key, value) => {
-    if (typeof window === 'undefined') return
-
-    try {
-      window.localStorage.setItem(key, JSON.stringify(value))
-    } catch {
+  const getMinimumWindowSize = (appId) => {
+    if (isCompactMobileViewport()) {
+      return MOBILE_WINDOW_APPS.has(appId)
+        ? { width: 240, height: 260 }
+        : { width: 240, height: 260 }
     }
+
+    return { width: 400, height: 300 }
+  }
+
+  const clampWindowFrame = (appId, frame) => {
+    const bounds = getViewportBounds()
+    const minimum = getMinimumWindowSize(appId)
+    const availableWidth = Math.max(1, bounds.right - bounds.left)
+    const availableHeight = Math.max(1, bounds.bottom - bounds.top)
+    const minWidth = Math.min(minimum.width, availableWidth)
+    const minHeight = Math.min(minimum.height, availableHeight)
+    const width = Math.min(availableWidth, Math.max(minWidth, Number(frame.width) || minimum.width))
+    const height = Math.min(availableHeight, Math.max(minHeight, Number(frame.height) || minimum.height))
+    const maxX = Math.max(bounds.left, bounds.right - width)
+    const maxY = Math.max(bounds.top, bounds.bottom - height)
+    const requestedX = Number(frame.x)
+    const requestedY = Number(frame.y)
+
+    return {
+      x: Math.min(maxX, Math.max(bounds.left, Number.isFinite(requestedX) ? requestedX : bounds.left)),
+      y: Math.min(maxY, Math.max(bounds.top, Number.isFinite(requestedY) ? requestedY : bounds.top)),
+      width,
+      height,
+    }
+  }
+
+  const getCenteredWindowFrame = (appId, { width, height }) => {
+    const bounds = getViewportBounds()
+    const requestedWidth = Math.min(width, bounds.right - bounds.left)
+    const requestedHeight = Math.min(height, bounds.bottom - bounds.top)
+    return clampWindowFrame(appId, {
+      x: bounds.left + ((bounds.right - bounds.left - requestedWidth) / 2),
+      y: bounds.top + ((bounds.bottom - bounds.top - requestedHeight) / 2),
+      width: requestedWidth,
+      height: requestedHeight,
+    })
+  }
+
+  const buildWindowFrame = (appId, index, size = { width: 900, height: 600 }) => {
+    if (isCompactMobileViewport() && MOBILE_WINDOW_APPS.has(appId)) {
+      const bounds = getViewportBounds()
+      return clampWindowFrame(appId, {
+        x: bounds.left,
+        y: bounds.top,
+        width: bounds.right - bounds.left,
+        height: bounds.bottom - bounds.top,
+      })
+    }
+
+    const centeredFrame = getCenteredWindowFrame(appId, size)
+    if (centeredFrame) return centeredFrame
+
+    return clampWindowFrame(appId, {
+      x: 100 + (index * 30),
+      y: 100 + (index * 30),
+      width: size.width,
+      height: size.height,
+    })
+  }
+
+  const getMaximizedWindowFrame = (appId) => {
+    const bounds = getViewportBounds()
+    return {
+      x: bounds.left,
+      y: bounds.top,
+      width: bounds.right - bounds.left,
+      height: bounds.bottom - bounds.top,
+    }
+  }
+
+  const getTopVisibleWindow = () => windows.value
+    .filter(window => !window.minimized)
+    .sort((a, b) => b.zIndex - a.zIndex)[0] || null
+
+  const focusTopWindow = () => {
+    const topWindow = getTopVisibleWindow()
+    windows.value = windows.value.map(window => ({
+      ...window,
+      focused: Boolean(topWindow && window.id === topWindow.id),
+    }))
+    activeWindowId.value = topWindow?.id || null
+    return topWindow
+  }
+
+  const createWindowRecord = (app, frame, snapshot = {}) => ({
+    id: snapshot.id || nextWindowId(),
+    appId: app.id,
+    title: app.name,
+    icon: app.icon,
+    description: app.description,
+    detailTitle: app.detailTitle,
+    details: app.details,
+    quickFacts: app.quickFacts,
+    evidence: app.evidence,
+    actions: app.actions,
+    content: app.content,
+    stack: app.stack,
+    repoUrl: app.repoUrl,
+    demoUrl: app.demoUrl,
+    launchMode: app.launchMode,
+    pluginId: app.pluginId || app.id,
+    url: app.url,
+    ...frame,
+    zIndex: Number.isFinite(snapshot.zIndex) ? snapshot.zIndex : ++maxZIndex.value,
+    minimized: Boolean(snapshot.minimized),
+    maximized: Boolean(snapshot.maximized),
+    focused: false,
+    prevX: Number.isFinite(snapshot.prevX) ? snapshot.prevX : frame.x,
+    prevY: Number.isFinite(snapshot.prevY) ? snapshot.prevY : frame.y,
+    prevWidth: Number.isFinite(snapshot.prevWidth) ? snapshot.prevWidth : frame.width,
+    prevHeight: Number.isFinite(snapshot.prevHeight) ? snapshot.prevHeight : frame.height,
+  })
+
+  const serializeWindow = (window) => ({
+    id: window.id,
+    appId: window.appId,
+    x: window.x,
+    y: window.y,
+    width: window.width,
+    height: window.height,
+    zIndex: window.zIndex,
+    minimized: window.minimized,
+    maximized: window.maximized,
+    prevX: window.prevX,
+    prevY: window.prevY,
+    prevWidth: window.prevWidth,
+    prevHeight: window.prevHeight,
+  })
+
+  const persistPortalState = () => {
+    writePortalState({
+      pinnedAppIds: pinnedAppIds.value,
+      recentAppIds: recentAppIds.value,
+      trashedAppIds: trashedAppIds.value,
+      removedAppIds: removedAppIds.value,
+      appOrder: apps.value.map(app => app.id),
+      settings: settings.value,
+      windows: windows.value
+        .filter(window => window.launchMode === 'internal' && window.appId !== 'trash' && window.pluginId !== 'project')
+        .map(serializeWindow),
+    })
+  }
+
+  const persistWindowState = () => {
+    persistPortalState()
+  }
+
+  const loadSettings = () => {
+    const state = readPortalState({ validAppIds: new Set(apps.value.map(app => app.id)) })
+    settings.value = normalizeSettings(state.settings)
   }
 
   const loadPortalState = () => {
     const validAppIds = new Set(apps.value.map(app => app.id))
+    const state = readPortalState({ validAppIds })
 
-    pinnedAppIds.value = readStorageList(PINNED_APPS_STORAGE_KEY)
-      .filter(id => validAppIds.has(id))
-      .slice(0, 8)
+    pinnedAppIds.value = state.pinnedAppIds
+    recentAppIds.value = state.recentAppIds
+    trashedAppIds.value = state.trashedAppIds
+    removedAppIds.value = state.removedAppIds
+    settings.value = normalizeSettings(state.settings)
 
-    recentAppIds.value = readStorageList(RECENT_APPS_STORAGE_KEY)
-      .filter(id => validAppIds.has(id))
-      .slice(0, 8)
-
-    trashedAppIds.value = readStorageList(TRASHED_APPS_STORAGE_KEY)
-      .filter(id => validAppIds.has(id))
-
-    removedAppIds.value = readStorageList(REMOVED_APPS_STORAGE_KEY)
-      .filter(id => validAppIds.has(id))
-
-    loadAppOrder()
-    loadSettings()
-  }
-
-  const loadAppOrder = () => {
-    const validAppIds = new Set(apps.value.map(app => app.id))
-    const orderedIds = readStorageList(APP_ORDER_STORAGE_KEY)
-      .filter(id => validAppIds.has(id))
-
-    if (!orderedIds.length) return
-
-    const orderMap = new Map(orderedIds.map((id, index) => [id, index]))
-    apps.value = [...apps.value].sort((a, b) => {
-      const aIndex = orderMap.has(a.id) ? orderMap.get(a.id) : Number.MAX_SAFE_INTEGER
-      const bIndex = orderMap.has(b.id) ? orderMap.get(b.id) : Number.MAX_SAFE_INTEGER
-      return aIndex - bIndex
-    })
-  }
-
-  const saveAppOrder = () => {
-    writeStorageList(APP_ORDER_STORAGE_KEY, apps.value.map(app => app.id))
-  }
-
-  const saveTrashState = () => {
-    writeStorageList(TRASHED_APPS_STORAGE_KEY, trashedAppIds.value)
-    writeStorageList(REMOVED_APPS_STORAGE_KEY, removedAppIds.value)
-  }
-
-  const loadSettings = () => {
-    if (typeof window === 'undefined') return
-
-    const defaults = {
-      wallpaper: 'deep-net',
-      wallpaperColor: '#1a1a2e',
-      showDock: true,
-      dockPosition: 'bottom',
-      iconSize: 'medium',
-      motionLevel: 'medium',
-      codeRainEnabled: true,
-      dockAnimationLevel: 'medium',
-      terminalFontSize: 'medium',
-      terminalHistoryLimit: 100,
-      terminalEasterEggsEnabled: true,
-      autoStartMonitoring: true,
-      statusMonitorIntervalMs: 45000,
+    if (state.appOrder.length) {
+      const orderMap = new Map(state.appOrder.map((id, index) => [id, index]))
+      apps.value = [...apps.value].sort((a, b) => {
+        const aIndex = orderMap.has(a.id) ? orderMap.get(a.id) : Number.MAX_SAFE_INTEGER
+        const bIndex = orderMap.has(b.id) ? orderMap.get(b.id) : Number.MAX_SAFE_INTEGER
+        return aIndex - bIndex
+      })
     }
 
-    const validIconSizes = new Set(['small', 'medium', 'large'])
-    const validDockPositions = new Set(['bottom'])
-    const validMotionLevels = new Set(['low', 'medium', 'high'])
-    const validDockAnimationLevels = new Set(['low', 'medium', 'high'])
-    const validTerminalFontSizes = new Set(['small', 'medium', 'large'])
-    const validHistoryLimits = new Set([30, 100, 300])
-    const validMonitorIntervals = new Set([15000, 30000, 45000, 60000])
+    const internalApps = new Map(apps.value
+      .filter(app => app.launchMode === 'internal')
+      .map(app => [app.id, app]))
+    const restoredWindows = state.windows
+      .filter(snapshot => internalApps.has(snapshot.appId))
+      .map(snapshot => {
+        const app = internalApps.get(snapshot.appId)
+        const frame = snapshot.maximized
+          ? getMaximizedWindowFrame(app.id)
+          : clampWindowFrame(app.id, snapshot)
+        return createWindowRecord(app, frame, snapshot)
+      })
 
-    try {
-      const raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY)
-      if (!raw) {
-        settings.value = defaults
-        return
-      }
-
-      const parsed = JSON.parse(raw)
-      if (!parsed || typeof parsed !== 'object') {
-        settings.value = defaults
-        return
-      }
-
-      settings.value = {
-        wallpaper: typeof parsed.wallpaper === 'string' ? parsed.wallpaper : defaults.wallpaper,
-        wallpaperColor: typeof parsed.wallpaperColor === 'string' ? parsed.wallpaperColor : defaults.wallpaperColor,
-        showDock: typeof parsed.showDock === 'boolean' ? parsed.showDock : defaults.showDock,
-        dockPosition: validDockPositions.has(parsed.dockPosition) ? parsed.dockPosition : defaults.dockPosition,
-        iconSize: validIconSizes.has(parsed.iconSize) ? parsed.iconSize : defaults.iconSize,
-        motionLevel: validMotionLevels.has(parsed.motionLevel) ? parsed.motionLevel : defaults.motionLevel,
-        codeRainEnabled: typeof parsed.codeRainEnabled === 'boolean' ? parsed.codeRainEnabled : defaults.codeRainEnabled,
-        dockAnimationLevel: validDockAnimationLevels.has(parsed.dockAnimationLevel) ? parsed.dockAnimationLevel : defaults.dockAnimationLevel,
-        terminalFontSize: validTerminalFontSizes.has(parsed.terminalFontSize) ? parsed.terminalFontSize : defaults.terminalFontSize,
-        terminalHistoryLimit: validHistoryLimits.has(parsed.terminalHistoryLimit) ? parsed.terminalHistoryLimit : defaults.terminalHistoryLimit,
-        terminalEasterEggsEnabled: typeof parsed.terminalEasterEggsEnabled === 'boolean' ? parsed.terminalEasterEggsEnabled : defaults.terminalEasterEggsEnabled,
-        autoStartMonitoring: typeof parsed.autoStartMonitoring === 'boolean' ? parsed.autoStartMonitoring : defaults.autoStartMonitoring,
-        statusMonitorIntervalMs: validMonitorIntervals.has(parsed.statusMonitorIntervalMs) ? parsed.statusMonitorIntervalMs : defaults.statusMonitorIntervalMs,
-      }
-    } catch {
-      settings.value = defaults
-    }
-  }
-
-  const saveSettings = () => {
-    if (typeof window === 'undefined') return
-
-    try {
-      window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings.value))
-    } catch {
-    }
+    windows.value = restoredWindows
+    maxZIndex.value = Math.max(100, ...restoredWindows.map(window => window.zIndex))
+    focusTopWindow()
   }
 
   const togglePinnedApp = (appId) => {
-    const exists = pinnedAppIds.value.includes(appId)
-    if (exists) {
+    if (!apps.value.some(app => app.id === appId)) return
+    if (pinnedAppIds.value.includes(appId)) {
       pinnedAppIds.value = pinnedAppIds.value.filter(id => id !== appId)
     } else {
       pinnedAppIds.value = [appId, ...pinnedAppIds.value].slice(0, 8)
     }
-
-    writeStorageList(PINNED_APPS_STORAGE_KEY, pinnedAppIds.value)
+    persistPortalState()
   }
 
   const recordAppLaunch = (appId) => {
     recentAppIds.value = [appId, ...recentAppIds.value.filter(id => id !== appId)].slice(0, 8)
-    writeStorageList(RECENT_APPS_STORAGE_KEY, recentAppIds.value)
+    persistPortalState()
   }
 
   const sanitizeAppFromQuickLists = (appId) => {
     pinnedAppIds.value = pinnedAppIds.value.filter(id => id !== appId)
     recentAppIds.value = recentAppIds.value.filter(id => id !== appId)
-    writeStorageList(PINNED_APPS_STORAGE_KEY, pinnedAppIds.value)
-    writeStorageList(RECENT_APPS_STORAGE_KEY, recentAppIds.value)
   }
 
   const closeWindowsByAppId = (appId) => {
-    const closingIds = windows.value.filter(w => w.appId === appId).map(w => w.id)
+    const closingIds = windows.value.filter(window => window.appId === appId).map(window => window.id)
     if (!closingIds.length) return
-    windows.value = windows.value.filter(w => w.appId !== appId)
-
-    if (activeWindowId.value && closingIds.includes(activeWindowId.value)) {
-      const remaining = windows.value.filter(w => !w.minimized)
-      activeWindowId.value = remaining.length > 0 ? remaining[remaining.length - 1].id : null
-      if (remaining.length > 0) remaining[remaining.length - 1].focused = true
-    }
+    windows.value = windows.value.filter(window => window.appId !== appId)
+    if (activeWindowId.value && closingIds.includes(activeWindowId.value)) focusTopWindow()
+    persistPortalState()
   }
 
   const canTrashApp = (appId) => appId !== 'terminal' && appId !== 'settings'
 
   const moveAppToTrash = (appId) => {
     const app = apps.value.find(item => item.id === appId)
-    if (!app) return
-    if (!canTrashApp(appId)) return
-    if (trashedAppIds.value.includes(appId)) return
-    if (removedAppIds.value.includes(appId)) return
+    if (!app || !canTrashApp(appId)) return
+    if (trashedAppIds.value.includes(appId) || removedAppIds.value.includes(appId)) return
 
     trashedAppIds.value = [appId, ...trashedAppIds.value.filter(id => id !== appId)]
     sanitizeAppFromQuickLists(appId)
     closeWindowsByAppId(appId)
-    saveTrashState()
+    persistPortalState()
   }
 
   const restoreAppFromTrash = (appId) => {
     if (!trashedAppIds.value.includes(appId)) return
     trashedAppIds.value = trashedAppIds.value.filter(id => id !== appId)
-    saveTrashState()
+    persistPortalState()
   }
 
   const deleteFromTrash = (appId) => {
@@ -475,7 +354,7 @@ export const useDesktopStore = defineStore('desktop', () => {
     removedAppIds.value = [appId, ...removedAppIds.value.filter(id => id !== appId)]
     sanitizeAppFromQuickLists(appId)
     closeWindowsByAppId(appId)
-    saveTrashState()
+    persistPortalState()
   }
 
   const emptyTrash = () => {
@@ -483,15 +362,14 @@ export const useDesktopStore = defineStore('desktop', () => {
     const toDelete = [...trashedAppIds.value]
     trashedAppIds.value = []
     removedAppIds.value = [...new Set([...toDelete, ...removedAppIds.value])]
-    toDelete.forEach((appId) => {
-      sanitizeAppFromQuickLists(appId)
-      closeWindowsByAppId(appId)
-    })
-    saveTrashState()
+    toDelete.forEach(appId => sanitizeAppFromQuickLists(appId))
+    windows.value = windows.value.filter(window => !toDelete.includes(window.appId))
+    focusTopWindow()
+    persistPortalState()
   }
 
   const openTrashWindow = () => {
-    const existingWindow = windows.value.find(w => w.appId === 'trash' && !w.minimized)
+    const existingWindow = windows.value.find(window => window.appId === 'trash')
     if (existingWindow) {
       bringToFront(existingWindow.id)
       return
@@ -499,11 +377,13 @@ export const useDesktopStore = defineStore('desktop', () => {
 
     const frame = buildWindowFrame('trash', windows.value.length, { width: 820, height: 560 })
     const newWindow = {
-      id: `window-${Date.now()}`,
+      id: nextWindowId(),
       appId: 'trash',
       title: '废纸篓',
       icon: '🗑️',
       url: null,
+      launchMode: 'internal',
+      pluginId: 'trash',
       x: frame.x,
       y: frame.y,
       width: frame.width,
@@ -514,18 +394,291 @@ export const useDesktopStore = defineStore('desktop', () => {
       focused: true,
     }
 
-    windows.value.forEach(w => {
-      w.focused = false
-    })
-    windows.value.push(newWindow)
+    windows.value = [...windows.value.map(window => ({ ...window, focused: false })), newWindow]
     activeWindowId.value = newWindow.id
   }
 
-  const probeUrl = async (url, timeoutMs = 6000) => {
-    if (typeof window === 'undefined') return false
+  const openWindow = (appId) => {
+    const app = apps.value.find(item => item.id === appId)
+    if (!app || trashedAppIds.value.includes(appId) || removedAppIds.value.includes(appId)) return
 
+    const shouldNavigate = app.launchMode === 'external' || (!app.launchMode && app.url)
+    if (shouldNavigate) {
+      if (typeof window !== 'undefined') window.open(app.url, '_blank', 'noopener,noreferrer')
+      recordAppLaunch(appId)
+      return
+    }
+
+    const existingWindow = windows.value.find(window => window.appId === appId)
+    if (existingWindow) {
+      bringToFront(existingWindow.id)
+      recordAppLaunch(appId)
+      return
+    }
+
+    const frame = buildWindowFrame(appId, windows.value.length)
+    const newWindow = createWindowRecord(app, frame)
+    windows.value = [
+      ...windows.value.map(window => ({ ...window, focused: false })),
+      { ...newWindow, focused: true },
+    ]
+    activeWindowId.value = newWindow.id
+    recordAppLaunch(appId)
+    persistPortalState()
+  }
+
+  const openProjectDetails = (appId) => {
+    const app = apps.value.find(item => item.id === appId)
+    if (!app || (!app.repoUrl && !app.content && !app.stack?.length)) return
+
+    const existingWindow = windows.value.find(window => (
+      window.pluginId === 'project' && window.projectAppId === appId
+    ))
+    if (existingWindow) {
+      bringToFront(existingWindow.id)
+      return
+    }
+
+    const frame = buildWindowFrame('project', windows.value.length, { width: 760, height: 600 })
+    const newWindow = {
+      id: nextWindowId(),
+      appId: 'project',
+      projectAppId: app.id,
+      title: `${app.name} · 项目页`,
+      icon: app.icon,
+      description: app.description,
+      content: app.content,
+      stack: app.stack,
+      repoUrl: app.repoUrl,
+      demoUrl: app.demoUrl || app.url,
+      status: app.status,
+      launchMode: 'internal',
+      pluginId: 'project',
+      url: null,
+      ...frame,
+      zIndex: ++maxZIndex.value,
+      minimized: false,
+      maximized: false,
+      focused: true,
+    }
+
+    windows.value = [
+      ...windows.value.map(window => ({ ...window, focused: false })),
+      newWindow,
+    ]
+    activeWindowId.value = newWindow.id
+  }
+
+  const closeWindow = (windowId) => {
+    const closingWindow = windows.value.find(window => window.id === windowId)
+    if (!closingWindow) return
+
+    const wasActive = activeWindowId.value === windowId
+    windows.value = windows.value.filter(window => window.id !== windowId)
+    if (wasActive) focusTopWindow()
+    persistPortalState()
+  }
+
+  const minimizeWindow = (windowId) => {
+    const index = windows.value.findIndex(window => window.id === windowId)
+    if (index < 0) return
+
+    const wasActive = activeWindowId.value === windowId
+    windows.value[index] = { ...windows.value[index], minimized: true, focused: false }
+    if (wasActive) focusTopWindow()
+    persistPortalState()
+  }
+
+  const maximizeWindow = (windowId) => {
+    const index = windows.value.findIndex(window => window.id === windowId)
+    if (index < 0) return
+
+    const currentWindow = windows.value[index]
+    if (currentWindow.maximized) {
+      const restored = clampWindowFrame(currentWindow.appId, {
+        x: currentWindow.prevX ?? 100,
+        y: currentWindow.prevY ?? 100,
+        width: currentWindow.prevWidth ?? 900,
+        height: currentWindow.prevHeight ?? 600,
+      })
+      windows.value[index] = { ...currentWindow, ...restored, maximized: false }
+    } else {
+      windows.value[index] = {
+        ...currentWindow,
+        ...getMaximizedWindowFrame(currentWindow.appId),
+        prevX: currentWindow.x,
+        prevY: currentWindow.y,
+        prevWidth: currentWindow.width,
+        prevHeight: currentWindow.height,
+        maximized: true,
+      }
+    }
+
+    bringToFront(windowId)
+    persistPortalState()
+  }
+
+  const bringToFront = (windowId) => {
+    const index = windows.value.findIndex(window => window.id === windowId)
+    if (index < 0) return
+
+    maxZIndex.value += 1
+    windows.value = windows.value.map((window, currentIndex) => currentIndex === index
+      ? { ...window, zIndex: maxZIndex.value, focused: true, minimized: false }
+      : { ...window, focused: false })
+    activeWindowId.value = windowId
+    persistPortalState()
+  }
+
+  const updateWindowPosition = (windowId, x, y) => {
+    const index = windows.value.findIndex(window => window.id === windowId)
+    if (index < 0) return
+    const currentWindow = windows.value[index]
+    if (currentWindow.maximized) return
+    const frame = clampWindowFrame(currentWindow.appId, { ...currentWindow, x, y })
+    windows.value[index] = { ...currentWindow, ...frame }
+  }
+
+  const updateWindowSize = (windowId, width, height) => {
+    const index = windows.value.findIndex(window => window.id === windowId)
+    if (index < 0) return
+    const currentWindow = windows.value[index]
+    if (currentWindow.maximized) return
+    const frame = clampWindowFrame(currentWindow.appId, { ...currentWindow, width, height })
+    windows.value[index] = { ...currentWindow, ...frame }
+  }
+
+  const resizeWindowsToViewport = () => {
+    windows.value = windows.value.map(window => {
+      if (window.maximized) return { ...window, ...getMaximizedWindowFrame(window.appId) }
+      const frame = clampWindowFrame(window.appId, window)
+      const restoredFrame = clampWindowFrame(window.appId, {
+        x: window.prevX,
+        y: window.prevY,
+        width: window.prevWidth,
+        height: window.prevHeight,
+      })
+      return {
+        ...window,
+        ...frame,
+        prevX: restoredFrame.x,
+        prevY: restoredFrame.y,
+        prevWidth: restoredFrame.width,
+        prevHeight: restoredFrame.height,
+      }
+    })
+    persistPortalState()
+  }
+
+  const setShowDock = (enabled) => {
+    settings.value.showDock = Boolean(enabled)
+    resizeWindowsToViewport()
+    persistPortalState()
+  }
+
+  const setShowServiceReadout = (enabled) => {
+    settings.value.showServiceReadout = Boolean(enabled)
+    persistPortalState()
+  }
+
+  const setIconSize = (size) => {
+    if (!['small', 'medium', 'large'].includes(size)) return
+    settings.value.iconSize = size
+    persistPortalState()
+  }
+
+  const setDockPosition = (position) => {
+    if (position !== 'bottom') return
+    settings.value.dockPosition = position
+    persistPortalState()
+  }
+
+  const setWallpaper = (presetId) => {
+    if (!presetId || typeof presetId !== 'string') return
+    settings.value.wallpaper = presetId
+    persistPortalState()
+  }
+
+  const setMotionLevel = (level) => {
+    if (!['low', 'medium', 'high'].includes(level)) return
+    settings.value.motionLevel = level
+    persistPortalState()
+  }
+
+  const setCodeRainEnabled = (enabled) => {
+    settings.value.codeRainEnabled = Boolean(enabled)
+    persistPortalState()
+  }
+
+  const setDockAnimationLevel = (level) => {
+    if (!['low', 'medium', 'high'].includes(level)) return
+    settings.value.dockAnimationLevel = level
+    persistPortalState()
+  }
+
+  const setTerminalFontSize = (size) => {
+    if (!['small', 'medium', 'large'].includes(size)) return
+    settings.value.terminalFontSize = size
+    persistPortalState()
+  }
+
+  const setTerminalHistoryLimit = (limit) => {
+    if (![30, 100, 300].includes(limit)) return
+    settings.value.terminalHistoryLimit = limit
+    persistPortalState()
+  }
+
+  const setTerminalEasterEggsEnabled = (enabled) => {
+    settings.value.terminalEasterEggsEnabled = Boolean(enabled)
+    persistPortalState()
+  }
+
+  const setAutoStartMonitoring = (enabled) => {
+    settings.value.autoStartMonitoring = Boolean(enabled)
+    persistPortalState()
+    if (settings.value.autoStartMonitoring) startStatusMonitoring(settings.value.statusMonitorIntervalMs)
+    else stopStatusMonitoring()
+  }
+
+  const setStatusMonitorInterval = (intervalMs) => {
+    if (![15000, 30000, 45000, 60000].includes(intervalMs)) return
+    settings.value.statusMonitorIntervalMs = intervalMs
+    persistPortalState()
+    if (settings.value.autoStartMonitoring) {
+      stopStatusMonitoring()
+      startStatusMonitoring(settings.value.statusMonitorIntervalMs)
+    }
+  }
+
+  const resetSettings = () => {
+    settings.value = createDefaultSettings()
+    persistPortalState()
+    stopStatusMonitoring()
+    if (settings.value.autoStartMonitoring) startStatusMonitoring(settings.value.statusMonitorIntervalMs)
+  }
+
+  const reorderDesktopApps = (fromAppId, toAppId) => {
+    if (!fromAppId || !toAppId || fromAppId === toAppId) return
+    const fromIndex = apps.value.findIndex(app => app.id === fromAppId)
+    const toIndex = apps.value.findIndex(app => app.id === toAppId)
+    if (fromIndex < 0 || toIndex < 0) return
+
+    const nextApps = [...apps.value]
+    const [moved] = nextApps.splice(fromIndex, 1)
+    nextApps.splice(toIndex, 0, moved)
+    apps.value = nextApps
+    persistPortalState()
+  }
+
+  const probeUrl = async (url, timeoutMs = 6000, signal) => {
+    if (typeof window === 'undefined') return false
     const controller = new AbortController()
+    const abort = () => controller.abort()
     const timeout = window.setTimeout(() => controller.abort(), timeoutMs)
+    if (signal) {
+      if (signal.aborted) return false
+      signal.addEventListener('abort', abort, { once: true })
+    }
 
     try {
       await fetch(url, {
@@ -539,376 +692,47 @@ export const useDesktopStore = defineStore('desktop', () => {
       return false
     } finally {
       window.clearTimeout(timeout)
+      signal?.removeEventListener('abort', abort)
     }
   }
 
   const checkServiceStatuses = async () => {
-    if (typeof window === 'undefined') return
-    if (isMonitoringStatus.value) return
+    if (typeof window === 'undefined' || isMonitoringStatus.value) return
 
+    const controller = new AbortController()
+    statusMonitorController = controller
     isMonitoringStatus.value = true
-    const checks = apps.value.map(async (app) => {
-      if (!app.url) return
-      if (app.id === 'terminal' || app.id === 'settings') {
-        app.status = 'local'
-        return
+
+    try {
+      await Promise.all(apps.value.map(async (app) => {
+        if (app.launchMode !== 'external' || !app.healthUrl && !app.url) return
+        const reachable = await probeUrl(app.healthUrl || app.url, 6000, controller.signal)
+        if (controller.signal.aborted) return
+        app.status = reachable ? 'reachable' : 'unreachable'
+        app.updatedAt = new Date().toISOString()
+      }))
+      if (!controller.signal.aborted) {
+        lastStatusCheckAt.value = Date.now()
+        persistPortalState()
       }
-
-      const reachable = await probeUrl(app.url)
-      app.status = reachable ? 'online' : 'offline'
-      app.updatedAt = new Date().toISOString().slice(0, 10)
-    })
-
-    await Promise.all(checks)
-    lastStatusCheckAt.value = Date.now()
-    isMonitoringStatus.value = false
+    } finally {
+      if (statusMonitorController === controller) statusMonitorController = null
+      isMonitoringStatus.value = false
+    }
   }
 
-  const startStatusMonitoring = (intervalMs = 45000) => {
-    if (typeof window === 'undefined') return
-    if (statusMonitorTimer) return
-
+  const startStatusMonitoring = (intervalMs = settings.value.statusMonitorIntervalMs) => {
+    if (typeof window === 'undefined' || statusMonitorTimer) return
     checkServiceStatuses()
     statusMonitorTimer = window.setInterval(checkServiceStatuses, intervalMs)
   }
 
   const stopStatusMonitoring = () => {
     if (typeof window === 'undefined') return
-    if (!statusMonitorTimer) return
-    window.clearInterval(statusMonitorTimer)
+    if (statusMonitorTimer) window.clearInterval(statusMonitorTimer)
     statusMonitorTimer = null
-  }
-
-  // 方法
-  const isCompactMobileViewport = () => {
-    if (typeof window === 'undefined') return false
-    return window.innerWidth < 768
-  }
-
-  const getCenteredWindowFrame = ({ width, height }) => {
-    if (typeof window === 'undefined') return null
-
-    const horizontalPadding = 20
-    const topOffset = 56
-    const bottomOffset = settings.value.showDock ? 96 : 20
-    const availableWidth = Math.max(320, window.innerWidth - horizontalPadding * 2)
-    const availableHeight = Math.max(320, window.innerHeight - topOffset - bottomOffset)
-    const safeWidth = Math.min(width, availableWidth)
-    const safeHeight = Math.min(height, availableHeight)
-    const centeredX = Math.round((window.innerWidth - safeWidth) / 2)
-    const centeredY = Math.round((window.innerHeight - safeHeight) / 2)
-    const maxX = window.innerWidth - safeWidth - horizontalPadding
-    const maxY = window.innerHeight - safeHeight - bottomOffset
-
-    return {
-      x: Math.max(horizontalPadding, Math.min(centeredX, maxX)),
-      y: Math.max(topOffset, Math.min(centeredY, maxY)),
-      width: safeWidth,
-      height: safeHeight,
-    }
-  }
-
-  const buildWindowFrame = (appId, index, size = { width: 900, height: 600 }) => {
-    const mobileApps = ['terminal', 'settings', 'profile', 'contact', 'stack']
-    if (typeof window !== 'undefined' && isCompactMobileViewport() && mobileApps.includes(appId)) {
-      const horizontalPadding = 8
-      const topOffset = 48
-      const bottomOffset = 88
-      const availableWidth = Math.max(240, window.innerWidth - horizontalPadding * 2)
-      const availableHeight = Math.max(260, window.innerHeight - topOffset - bottomOffset)
-
-      return {
-        x: horizontalPadding,
-        y: topOffset,
-        width: availableWidth,
-        height: availableHeight,
-      }
-    }
-
-    const centeredFrame = getCenteredWindowFrame(size)
-    if (centeredFrame) return centeredFrame
-
-    return {
-      x: 100 + (index * 30),
-      y: 100 + (index * 30),
-      width: size.width,
-      height: size.height,
-    }
-  }
-
-  const openWindow = (appId) => {
-    const app = apps.value.find(a => a.id === appId)
-    if (!app) return
-    if (trashedAppIds.value.includes(appId) || removedAppIds.value.includes(appId)) return
-
-    const shouldNavigate = app.url && app.id !== 'terminal' && app.id !== 'settings'
-    if (shouldNavigate) {
-      if (typeof window !== 'undefined') {
-        window.open(app.url, '_blank', 'noopener,noreferrer')
-      }
-      recordAppLaunch(appId)
-      return
-    }
-
-    const existingWindow = windows.value.find(w => w.appId === appId && !w.minimized)
-    if (existingWindow) {
-      bringToFront(existingWindow.id)
-      recordAppLaunch(appId)
-      return
-    }
-
-    const frame = buildWindowFrame(appId, windows.value.length)
-    const newZIndex = ++maxZIndex.value
-    const newWindow = {
-      id: `window-${Date.now()}`,
-      appId: app.id,
-      title: app.name,
-      icon: app.icon,
-      description: app.description,
-      detailTitle: app.detailTitle,
-      details: app.details,
-      quickFacts: app.quickFacts,
-      evidence: app.evidence,
-      actions: app.actions,
-      url: app.url,
-      x: frame.x,
-      y: frame.y,
-      width: frame.width,
-      height: frame.height,
-      zIndex: newZIndex,
-      minimized: false,
-      maximized: false,
-      focused: true,
-    }
-
-    windows.value = [
-      ...windows.value.map(w => ({ ...w, focused: false })),
-      newWindow,
-    ]
-    activeWindowId.value = newWindow.id
-    recordAppLaunch(appId)
-  }
-
-  const closeWindow = (windowId) => {
-    const closingWindow = windows.value.find(w => w.id === windowId)
-    if (!closingWindow) return
-
-    const wasActive = activeWindowId.value === windowId
-    windows.value = windows.value.filter(w => w.id !== windowId)
-
-    if (wasActive) {
-      const remaining = windows.value.filter(w => !w.minimized)
-      if (remaining.length > 0) {
-        const lastWindow = remaining[remaining.length - 1]
-        activeWindowId.value = lastWindow.id
-        const idx = windows.value.findIndex(w => w.id === lastWindow.id)
-        if (idx > -1) {
-          windows.value[idx] = { ...windows.value[idx], focused: true }
-        }
-      } else {
-        activeWindowId.value = null
-      }
-    }
-  }
-
-  const minimizeWindow = (windowId) => {
-    const index = windows.value.findIndex(w => w.id === windowId)
-    if (index < 0) return
-
-    const wasActive = activeWindowId.value === windowId
-    windows.value[index] = { ...windows.value[index], minimized: true, focused: false }
-
-    if (wasActive) {
-      const remaining = windows.value.filter(w => !w.minimized)
-      if (remaining.length > 0) {
-        const lastWindow = remaining[remaining.length - 1]
-        activeWindowId.value = lastWindow.id
-        const idx = windows.value.findIndex(w => w.id === lastWindow.id)
-        if (idx > -1) {
-          windows.value[idx] = { ...windows.value[idx], focused: true }
-        }
-      } else {
-        activeWindowId.value = null
-      }
-    }
-  }
-
-  const maximizeWindow = (windowId) => {
-    const index = windows.value.findIndex(w => w.id === windowId)
-    if (index < 0) return
-
-    const currentWindow = windows.value[index]
-    if (currentWindow.maximized) {
-      windows.value[index] = {
-        ...currentWindow,
-        maximized: false,
-        x: currentWindow.prevX || 100,
-        y: currentWindow.prevY || 100,
-        width: currentWindow.prevWidth || 900,
-        height: currentWindow.prevHeight || 600,
-      }
-    } else {
-      windows.value[index] = {
-        ...currentWindow,
-        prevX: currentWindow.x,
-        prevY: currentWindow.y,
-        prevWidth: currentWindow.width,
-        prevHeight: currentWindow.height,
-        maximized: true,
-        x: 0,
-        y: 0,
-        width: typeof window !== 'undefined' ? window.innerWidth : 900,
-        height: typeof window !== 'undefined' ? window.innerHeight : 600,
-      }
-    }
-  }
-
-  const bringToFront = (windowId) => {
-    const index = windows.value.findIndex(w => w.id === windowId)
-    if (index < 0) return
-
-    windows.value = windows.value.map((w, i) => {
-      if (i === index) {
-        return { ...w, zIndex: ++maxZIndex.value, focused: true, minimized: false }
-      }
-      return { ...w, focused: false }
-    })
-    activeWindowId.value = windowId
-  }
-
-  const updateWindowPosition = (windowId, x, y) => {
-    const index = windows.value.findIndex(w => w.id === windowId)
-    if (index < 0) return
-    const currentWindow = windows.value[index]
-    if (currentWindow.maximized) return
-    windows.value[index] = { ...currentWindow, x, y }
-  }
-
-  const updateWindowSize = (windowId, width, height) => {
-    const index = windows.value.findIndex(w => w.id === windowId)
-    if (index < 0) return
-    const currentWindow = windows.value[index]
-    if (currentWindow.maximized) return
-    windows.value[index] = { ...currentWindow, width, height }
-  }
-
-  const setShowDock = (enabled) => {
-    settings.value.showDock = Boolean(enabled)
-    saveSettings()
-  }
-
-  const setIconSize = (size) => {
-    if (size !== 'small' && size !== 'medium' && size !== 'large') return
-    settings.value.iconSize = size
-    saveSettings()
-  }
-
-  const setDockPosition = (position) => {
-    if (position !== 'bottom') return
-    settings.value.dockPosition = position
-    saveSettings()
-  }
-
-  const setWallpaper = (presetId) => {
-    if (!presetId || typeof presetId !== 'string') return
-    settings.value.wallpaper = presetId
-    saveSettings()
-  }
-
-  const setMotionLevel = (level) => {
-    if (level !== 'low' && level !== 'medium' && level !== 'high') return
-    settings.value.motionLevel = level
-    saveSettings()
-  }
-
-  const setCodeRainEnabled = (enabled) => {
-    settings.value.codeRainEnabled = Boolean(enabled)
-    saveSettings()
-  }
-
-  const setDockAnimationLevel = (level) => {
-    if (level !== 'low' && level !== 'medium' && level !== 'high') return
-    settings.value.dockAnimationLevel = level
-    saveSettings()
-  }
-
-  const setTerminalFontSize = (size) => {
-    if (size !== 'small' && size !== 'medium' && size !== 'large') return
-    settings.value.terminalFontSize = size
-    saveSettings()
-  }
-
-  const setTerminalHistoryLimit = (limit) => {
-    if (limit !== 30 && limit !== 100 && limit !== 300) return
-    settings.value.terminalHistoryLimit = limit
-    saveSettings()
-  }
-
-  const setTerminalEasterEggsEnabled = (enabled) => {
-    settings.value.terminalEasterEggsEnabled = Boolean(enabled)
-    saveSettings()
-  }
-
-  const setAutoStartMonitoring = (enabled) => {
-    settings.value.autoStartMonitoring = Boolean(enabled)
-    saveSettings()
-
-    if (settings.value.autoStartMonitoring) {
-      startStatusMonitoring(settings.value.statusMonitorIntervalMs)
-    } else {
-      stopStatusMonitoring()
-    }
-  }
-
-  const setStatusMonitorInterval = (intervalMs) => {
-    if (![15000, 30000, 45000, 60000].includes(intervalMs)) return
-    settings.value.statusMonitorIntervalMs = intervalMs
-    saveSettings()
-
-    if (settings.value.autoStartMonitoring) {
-      stopStatusMonitoring()
-      startStatusMonitoring(settings.value.statusMonitorIntervalMs)
-    }
-  }
-
-  const resetSettings = () => {
-    settings.value = {
-      wallpaper: 'deep-net',
-      wallpaperColor: '#1a1a2e',
-      showDock: true,
-      dockPosition: 'bottom',
-      iconSize: 'medium',
-      motionLevel: 'medium',
-      codeRainEnabled: true,
-      dockAnimationLevel: 'medium',
-      terminalFontSize: 'medium',
-      terminalHistoryLimit: 100,
-      terminalEasterEggsEnabled: true,
-      autoStartMonitoring: true,
-      statusMonitorIntervalMs: 45000,
-    }
-    saveSettings()
-
-    stopStatusMonitoring()
-    if (settings.value.autoStartMonitoring) {
-      startStatusMonitoring(settings.value.statusMonitorIntervalMs)
-    }
-  }
-
-  const reorderDesktopApps = (fromAppId, toAppId) => {
-    if (!fromAppId || !toAppId) return
-    if (fromAppId === toAppId) return
-
-    const fromIndex = apps.value.findIndex(app => app.id === fromAppId)
-    const toIndex = apps.value.findIndex(app => app.id === toAppId)
-    if (fromIndex < 0 || toIndex < 0) return
-
-    const nextApps = [...apps.value]
-    const [moved] = nextApps.splice(fromIndex, 1)
-    nextApps.splice(toIndex, 0, moved)
-
-    apps.value = nextApps
-    saveAppOrder()
+    statusMonitorController?.abort()
+    statusMonitorController = null
   }
 
   return {
@@ -930,14 +754,18 @@ export const useDesktopStore = defineStore('desktop', () => {
     trashCount,
     isMonitoringStatus,
     lastStatusCheckAt,
+    persistWindowState,
     openWindow,
+    openProjectDetails,
     closeWindow,
     minimizeWindow,
     maximizeWindow,
     bringToFront,
     updateWindowPosition,
     updateWindowSize,
+    resizeWindowsToViewport,
     setShowDock,
+    setShowServiceReadout,
     setIconSize,
     setDockPosition,
     setWallpaper,

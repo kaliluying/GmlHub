@@ -466,8 +466,8 @@ const handleStatus = async (target) => {
   await store.checkServiceStatuses()
 
   if (!target || target === 'all') {
-    const { online, offline, total } = store.serviceSummary
-    await pushLine('info', `服务概览: total=${total}, online=${online}, offline=${offline}`)
+    const { reachable, unreachable, unknown, total } = store.serviceSummary
+    await pushLine('info', `服务概览: total=${total}, reachable=${reachable}, unreachable=${unreachable}, unknown=${unknown}`)
     if (store.lastStatusCheckAt) {
       const checkedAt = new Date(store.lastStatusCheckAt).toLocaleTimeString('zh-CN', {
         hour: '2-digit',
@@ -716,7 +716,7 @@ const handleCurl = async (rawTarget) => {
 
   await pushLine('info', '{')
   await pushLine('info', `  "url": "${url}",`)
-  await pushLine('info', '  "status": "online",')
+  await pushLine('info', '  "status": "reachable",')
   await pushLine('info', '  "latencyMs": 41,')
   await pushLine('info', `  "checkedAt": "${new Date().toISOString()}"`)
   await pushLine('info', '}')
@@ -1371,12 +1371,16 @@ onUnmounted(() => {
   color: rgb(251 113 133);
 }
 
-.line-status-online {
+.line-status-reachable {
   color: rgb(74 222 128);
 }
 
-.line-status-offline {
+.line-status-unreachable {
   color: rgb(251 113 133);
+}
+
+.line-status-unknown {
+  color: rgb(226 232 240);
 }
 
 .line-status-local {
@@ -1411,9 +1415,37 @@ onUnmounted(() => {
 }
 
 .theme-cyber {
-  background: linear-gradient(180deg, rgba(2, 6, 23, 0.95) 0%, rgba(3, 13, 31, 0.95) 100%);
+  background:
+    radial-gradient(120% 90% at 50% -10%, rgba(56, 189, 248, 0.1), transparent 55%),
+    linear-gradient(180deg, rgba(2, 6, 23, 0.94) 0%, rgba(3, 13, 31, 0.95) 100%);
   color: rgb(186 230 253);
   border-top: 1px solid rgba(56, 189, 248, 0.2);
+}
+
+.terminal-output::-webkit-scrollbar {
+  width: 6px;
+}
+
+.terminal-output::-webkit-scrollbar-thumb {
+  background: rgba(125, 211, 252, 0.22);
+  border-radius: 3px;
+}
+
+.terminal-output::-webkit-scrollbar-thumb:hover {
+  background: rgba(125, 211, 252, 0.4);
+}
+
+.terminal-input-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: center;
+  border-top: 1px solid rgba(125, 211, 252, 0.1);
+  padding-top: 8px;
+}
+
+.terminal-input:focus {
+  text-shadow: 0 0 12px rgba(125, 211, 252, 0.45);
 }
 
 @media (max-width: 767px) {

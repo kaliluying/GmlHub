@@ -3,9 +3,33 @@
 @tailwind utilities;
 
 :root {
-  font-family: 'SF Pro Display', 'SF Pro Text', 'PingFang SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color-scheme: dark;
+  font-family: 'Aptos', 'Avenir Next', 'PingFang SC', 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  --hud-void: #050810;
+  --hud-surface: #0b1220;
+  --hud-cyan: #7dd3fc;
+  --hud-amber: #fbbf74;
+  --hud-green: #86efac;
+  --hud-red: #fda4af;
+  --hud-text: #e8f1fb;
+  --hud-muted: #8fa4ba;
+  /* HUD 界面层令牌 */
+  --hud-primary: #7dd3fc;
+  --hud-primary-deep: #38bdf8;
+  --hud-primary-faint: rgba(56, 189, 248, 0.14);
+  --hud-primary-border: rgba(125, 211, 252, 0.34);
+  --hud-line: rgba(148, 163, 184, 0.18);
+  --hud-line-strong: rgba(148, 163, 184, 0.3);
+  --hud-panel: rgba(9, 14, 24, 0.6);
+  --hud-panel-soft: rgba(13, 21, 36, 0.5);
+  --hud-card: rgba(17, 27, 45, 0.44);
+  --hud-card-hover: rgba(27, 43, 66, 0.56);
+  --radius-card: 14px;
+  --radius-inner: 10px;
+  --shadow-card: 0 14px 34px rgba(0, 0, 0, 0.3);
+  --ease-hud: cubic-bezier(0.22, 1, 0.36, 1);
   --glass-surface: rgba(9, 14, 24, 0.58);
   --glass-border: rgba(255, 255, 255, 0.14);
   --glass-highlight: rgba(255, 255, 255, 0.18);
@@ -23,6 +47,28 @@ html, body, #app {
   width: 100%;
   height: 100%;
   overflow: hidden;
+}
+
+body {
+  background: var(--hud-void);
+  color: var(--hud-text);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:focus-visible,
+[role='button']:focus-visible {
+  outline: 2px solid rgba(125, 211, 252, 0.9);
+  outline-offset: 3px;
 }
 
 /* Glassmorphism utilities */
@@ -94,6 +140,183 @@ html, body, #app {
     animation: drift-wave-b 30s ease-in-out infinite;
   }
 
+  /* ===== HUD 面板与控件基线（统一各面板风格） ===== */
+
+  /* 面板主卡片：替代 border-slate-400/30 bg-slate-900/45 组合 */
+  .panel-card {
+    border-radius: var(--radius-card);
+    border: 1px solid var(--hud-line);
+    background: linear-gradient(
+      162deg,
+      rgba(20, 31, 52, 0.52) 0%,
+      var(--hud-panel-soft) 100%
+    );
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: var(--shadow-card), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+  }
+
+  /* 次级卡片：列表项 / 数据格 */
+  .panel-sub-card {
+    border-radius: var(--radius-inner);
+    border: 1px solid rgba(125, 211, 252, 0.14);
+    background: rgba(8, 14, 26, 0.5);
+    transition: border-color 0.22s var(--ease-hud), background 0.22s var(--ease-hud),
+      transform 0.22s var(--ease-hud), box-shadow 0.22s var(--ease-hud);
+  }
+
+  .panel-sub-card:hover {
+    border-color: rgba(125, 211, 252, 0.32);
+    background: rgba(17, 30, 52, 0.6);
+  }
+
+  /* 统一按钮基线 */
+  .hud-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-radius: var(--radius-inner);
+    border: 1px solid var(--hud-line-strong);
+    background: rgba(15, 23, 42, 0.4);
+    color: rgb(226 232 240);
+    padding: 8px 13px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
+    transition: all 0.2s var(--ease-hud);
+  }
+
+  .hud-btn:hover:not(:disabled) {
+    border-color: var(--hud-primary-border);
+    background: var(--hud-primary-faint);
+    color: var(--hud-text);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(2, 6, 23, 0.35);
+  }
+
+  .hud-btn:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: none;
+  }
+
+  .hud-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .hud-btn--danger {
+    color: rgb(254 205 211);
+  }
+
+  .hud-btn--danger:hover:not(:disabled) {
+    border-color: rgba(251, 113, 133, 0.5);
+    background: rgba(244, 63, 94, 0.16);
+    color: rgb(254 205 211);
+  }
+
+  /* 分段选择容器与按钮 */
+  .hud-segment {
+    display: inline-flex;
+    border-radius: 12px;
+    border: 1px solid rgba(125, 211, 252, 0.12);
+    background: rgba(8, 14, 26, 0.5);
+    padding: 4px;
+    gap: 2px;
+  }
+
+  .hud-segment-btn {
+    min-width: 56px;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--hud-muted);
+    transition: all 0.18s var(--ease-hud);
+  }
+
+  .hud-segment-btn:hover {
+    color: var(--hud-text);
+    background: rgba(125, 211, 252, 0.08);
+  }
+
+  .hud-segment-btn.active {
+    background: linear-gradient(180deg, rgba(56, 189, 248, 0.28), rgba(14, 165, 233, 0.22));
+    color: var(--hud-cyan);
+    box-shadow: 0 0 0 1px rgba(125, 211, 252, 0.28) inset;
+  }
+
+  /* 开关行（设置项） */
+  .hud-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    border-radius: 12px;
+    border: 1px solid var(--hud-line);
+    background: rgba(15, 23, 42, 0.36);
+    padding: 10px 13px;
+    transition: all 0.2s var(--ease-hud);
+  }
+
+  .hud-toggle-row:hover {
+    border-color: rgba(125, 211, 252, 0.26);
+    background: rgba(22, 34, 56, 0.46);
+  }
+
+  .hud-toggle-row.active {
+    border-color: rgba(125, 211, 252, 0.44);
+    background: linear-gradient(180deg, rgba(56, 189, 248, 0.16), rgba(56, 189, 248, 0.08));
+  }
+
+  /* 状态徽标 */
+  .hud-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border-radius: 999px;
+    padding: 5px 11px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+
+  .hud-badge::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 999px;
+    background: currentColor;
+    box-shadow: 0 0 8px currentColor;
+  }
+
+  .hud-badge--reachable {
+    background: rgba(16, 185, 129, 0.18);
+    color: rgb(134 239 172);
+  }
+
+  .hud-badge--unreachable {
+    background: rgba(244, 63, 94, 0.18);
+    color: rgb(253 164 175);
+  }
+
+  .hud-badge--unknown {
+    background: rgba(100, 116, 139, 0.18);
+    color: rgb(203 213 225);
+  }
+
+  /* 输入框焦点环 */
+  .hud-input {
+    transition: box-shadow 0.2s var(--ease-hud), border-color 0.2s var(--ease-hud);
+  }
+
+  .hud-input:focus {
+    outline: none;
+    border-color: rgba(125, 211, 252, 0.55);
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.14), 0 0 20px rgba(56, 189, 248, 0.1);
+  }
+
 }
 
 @keyframes float-orb {
@@ -137,17 +360,18 @@ html, body, #app {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(128, 128, 128, 0.5);
+  background: rgba(125, 211, 252, 0.28);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(128, 128, 128, 0.7);
+  background: rgba(125, 211, 252, 0.48);
 }
 
 /* Selection */
 ::selection {
-  background: rgba(0, 122, 255, 0.3);
+  background: rgba(56, 189, 248, 0.28);
+  color: #f8fbff;
 }
 
 /* Prevent text selection on desktop */
@@ -159,4 +383,200 @@ html, body, #app {
 /* Smooth transitions */
 .transition-smooth {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Shared liquid glass tokens */
+:root {
+  color-scheme: light;
+  --hud-void: #e8eef5;
+  --hud-surface: #f7f9fc;
+  --hud-cyan: #5b83ce;
+  --hud-amber: #b88743;
+  --hud-green: #278d6a;
+  --hud-red: #c85e6d;
+  --hud-text: #182235;
+  --hud-muted: #667085;
+  --hud-primary: #5b83ce;
+  --hud-primary-deep: #416bb6;
+  --hud-primary-faint: rgba(91, 131, 206, 0.12);
+  --hud-primary-border: rgba(91, 131, 206, 0.34);
+  --hud-line: rgba(116, 133, 158, 0.18);
+  --hud-line-strong: rgba(116, 133, 158, 0.28);
+  --hud-panel: rgba(255, 255, 255, 0.5);
+  --hud-panel-soft: rgba(255, 255, 255, 0.42);
+  --hud-card: rgba(255, 255, 255, 0.42);
+  --hud-card-hover: rgba(255, 255, 255, 0.68);
+  --glass-surface: rgba(255, 255, 255, 0.52);
+  --glass-border: rgba(255, 255, 255, 0.7);
+  --glass-highlight: rgba(255, 255, 255, 0.78);
+  --radius-card: 1.35rem;
+  --radius-inner: 0.9rem;
+  --shadow-card: 0 20px 48px rgba(100, 119, 148, 0.12);
+  --ease-hud: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+body {
+  background: #e8eef5;
+  color: #182235;
+}
+
+button:focus-visible,
+[role='button']:focus-visible {
+  outline-color: rgba(91, 131, 206, 0.82);
+}
+
+.glass,
+.glass-strong {
+  border-color: rgba(255, 255, 255, 0.72);
+  background: rgba(250, 252, 255, 0.68);
+  box-shadow: 0 24px 60px rgba(94, 108, 133, 0.16), 0 2px 0 rgba(255, 255, 255, 0.78) inset;
+  backdrop-filter: blur(28px) saturate(150%);
+  -webkit-backdrop-filter: blur(28px) saturate(150%);
+}
+
+.glass-strong {
+  background: rgba(248, 251, 255, 0.8);
+}
+
+.window-shadow {
+  box-shadow: 0 28px 72px rgba(73, 91, 121, 0.2), 0 2px 0 rgba(255, 255, 255, 0.84) inset;
+}
+
+.dock-shadow {
+  box-shadow: 0 28px 62px rgba(74, 94, 126, 0.2), 0 2px 0 rgba(255, 255, 255, 0.76) inset;
+}
+
+.text-hud-text {
+  color: var(--hud-text);
+}
+
+.text-hud-muted {
+  color: var(--hud-muted);
+}
+
+.panel-card {
+  border-color: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.48);
+  box-shadow: var(--shadow-card), 0 2px 0 rgba(255, 255, 255, 0.72) inset;
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+}
+
+.panel-sub-card {
+  border-color: rgba(116, 133, 158, 0.16);
+  background: rgba(255, 255, 255, 0.34);
+}
+
+.panel-sub-card:hover {
+  border-color: rgba(91, 131, 206, 0.32);
+  background: rgba(255, 255, 255, 0.64);
+}
+
+.hud-btn {
+  border-color: rgba(116, 133, 158, 0.24);
+  background: rgba(255, 255, 255, 0.44);
+  color: #344056;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.64) inset;
+}
+
+.hud-btn:hover:not(:disabled) {
+  border-color: rgba(91, 131, 206, 0.38);
+  background: rgba(231, 239, 255, 0.72);
+  color: #243452;
+  box-shadow: 0 8px 18px rgba(91, 131, 206, 0.12);
+}
+
+.hud-btn--danger {
+  color: #b64e5e;
+}
+
+.hud-segment {
+  border-color: rgba(116, 133, 158, 0.16);
+  background: rgba(255, 255, 255, 0.38);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.62) inset;
+}
+
+.hud-segment-btn {
+  color: #77849a;
+}
+
+.hud-segment-btn:hover {
+  color: #344056;
+  background: rgba(255, 255, 255, 0.54);
+}
+
+.hud-segment-btn.active {
+  background: linear-gradient(180deg, rgba(135, 173, 241, 0.66), rgba(91, 131, 206, 0.58));
+  color: #fff;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.54) inset, 0 5px 12px rgba(91, 131, 206, 0.16);
+}
+
+.hud-toggle-row {
+  border-color: rgba(116, 133, 158, 0.16);
+  background: rgba(255, 255, 255, 0.36);
+  color: #344056;
+}
+
+.hud-toggle-row:hover {
+  border-color: rgba(91, 131, 206, 0.3);
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.hud-toggle-row.active {
+  border-color: rgba(91, 131, 206, 0.36);
+  background: linear-gradient(180deg, rgba(220, 232, 255, 0.82), rgba(203, 220, 251, 0.58));
+}
+
+.hud-badge--reachable {
+  background: rgba(75, 177, 139, 0.14);
+  color: #278d6a;
+}
+
+.hud-badge--unreachable {
+  background: rgba(200, 94, 109, 0.13);
+  color: #b65060;
+}
+
+.hud-badge--unknown {
+  background: rgba(116, 133, 158, 0.14);
+  color: #69768a;
+}
+
+.hud-input:focus {
+  border-color: rgba(91, 131, 206, 0.52);
+  box-shadow: 0 0 0 3px rgba(91, 131, 206, 0.14), 0 0 20px rgba(91, 131, 206, 0.08);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(104, 123, 151, 0.28);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(104, 123, 151, 0.42);
+}
+
+::selection {
+  background: rgba(110, 151, 226, 0.24);
+  color: #182235;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass,
+  .glass-strong,
+  .panel-card {
+    background: #f8fafc;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
 }

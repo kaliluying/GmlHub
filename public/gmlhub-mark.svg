@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title>GMLHUB</title>
+  <defs>
+    <linearGradient id="shell" x1="8" y1="6" x2="56" y2="58" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#b9f1ff"/>
+      <stop offset="0.48" stop-color="#7dd3fc"/>
+      <stop offset="1" stop-color="#147da8"/>
+    </linearGradient>
+    <linearGradient id="core" x1="19" y1="16" x2="47" y2="50" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#102b42"/>
+      <stop offset="1" stop-color="#06111e"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="18" fill="#050810"/>
+  <rect x="6" y="6" width="52" height="52" rx="15" fill="url(#shell)"/>
+  <rect x="14" y="14" width="36" height="36" rx="10" fill="url(#core)" stroke="#d8f8ff" stroke-opacity=".52"/>
+  <path d="M39.5 23.5c-2.2-1.8-4.6-2.7-7.4-2.7-6.8 0-11.8 4.8-11.8 11.1S25.3 43 32.1 43c2.7 0 5.2-.9 7.4-2.7v-5.8h-7.8v4.1h3.1v-.5c-.8.5-1.7.7-2.7.7-3.5 0-6.1-2.6-6.1-6.9 0-4.2 2.6-6.7 6.1-6.7 1.7 0 3.2.5 4.6 1.7z" fill="#ecfbff"/>
+</svg>

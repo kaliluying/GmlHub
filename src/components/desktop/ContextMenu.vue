@@ -3,7 +3,7 @@
     <div
       v-if="show"
       ref="menuRef"
-      class="ctx-menu fixed rounded-xl border border-white/25 bg-slate-900/90 text-slate-100 shadow-2xl py-1.5"
+      class="ctx-menu fixed rounded-xl border border-white/20 bg-[rgba(7,12,22,0.92)] text-hud-text shadow-2xl py-1.5 backdrop-blur-xl"
       :style="menuStyle"
       @click.stop
     >
@@ -156,10 +156,13 @@ onUnmounted(() => {
   text-align: left;
   padding: 6px 10px;
   font-size: 12px;
+  border-radius: 6px;
+  transition: background 0.16s var(--ease-hud), color 0.16s var(--ease-hud);
 }
 
 .ctx-item:hover:not(:disabled) {
-  background: rgba(148, 163, 184, 0.22);
+  background: rgba(56, 189, 248, 0.16);
+  color: var(--hud-text);
 }
 
 .ctx-item:disabled {
@@ -171,8 +174,41 @@ onUnmounted(() => {
   color: rgb(253 164 175);
 }
 
+.ctx-item.danger:hover:not(:disabled) {
+  background: rgba(244, 63, 94, 0.16);
+  color: rgb(254 205 211);
+}
+
 .ctx-divider {
-  margin: 4px 0;
-  border-top: 1px solid rgba(148, 163, 184, 0.26);
+  margin: 4px 8px;
+  border-top: 1px solid rgba(125, 211, 252, 0.14);
+}
+
+.ctx-menu {
+  border-color: rgba(255, 255, 255, 0.78) !important;
+  border-radius: 0.9rem;
+  background: rgba(248, 251, 255, 0.82) !important;
+  color: #182235;
+  box-shadow: 0 22px 48px rgba(73, 91, 121, 0.2), 0 2px 0 rgba(255, 255, 255, 0.84) inset;
+  backdrop-filter: blur(26px) saturate(150%);
+  -webkit-backdrop-filter: blur(26px) saturate(150%);
+}
+
+.ctx-item:hover:not(:disabled) {
+  background: rgba(224, 236, 255, 0.72);
+  color: #243452;
+}
+
+.ctx-item.danger {
+  color: #b65060;
+}
+
+.ctx-item.danger:hover:not(:disabled) {
+  background: rgba(255, 226, 231, 0.74);
+  color: #a84556;
+}
+
+.ctx-divider {
+  border-top-color: rgba(116, 133, 158, 0.16);
 }
 </style>

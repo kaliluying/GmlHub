@@ -11,6 +11,18 @@ export default {
           dark: 'rgba(30, 30, 30, 0.7)',
           border: 'rgba(255, 255, 255, 0.3)',
         },
+        hud: {
+          void: 'var(--hud-void)',
+          surface: 'var(--hud-surface)',
+          cyan: 'var(--hud-cyan)',
+          amber: 'var(--hud-amber)',
+          green: 'var(--hud-green)',
+          red: 'var(--hud-red)',
+          text: 'var(--hud-text)',
+          muted: 'var(--hud-muted)',
+          line: 'var(--hud-line)',
+          'line-strong': 'var(--hud-line-strong)',
+        },
         app: {
           tools: '#FF9500',
           wiki: '#007AFF',
@@ -24,6 +36,17 @@ export default {
       },
       backdropBlur: {
         glass: '20px',
+      },
+      borderRadius: {
+        hud: 'var(--radius-card)',
+        'hud-inner': 'var(--radius-inner)',
+      },
+      boxShadow: {
+        'hud-card': 'var(--shadow-card)',
+        'hud-glow': '0 0 0 1px rgba(125, 211, 252, 0.25) inset, 0 0 22px rgba(56, 189, 248, 0.14)',
+      },
+      transitionTimingFunction: {
+        hud: 'var(--ease-hud)',
       },
       animation: {
         'bounce-short': 'bounce-short 0.3s ease-in-out',
