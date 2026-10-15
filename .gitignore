@@ -27,3 +27,7 @@ REAL_HEALTH_CHECK_GUIDE.md
 dist.zip
 
 .claude/
+
+# Local Python deployment checks
+__pycache__/
+*.pyc

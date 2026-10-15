@@ -1,0 +1,94 @@
+name: GmlHub CI and deployment
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Deploy current main or roll back to an installed release
+        type: choice
+        options: [deploy, rollback]
+        default: deploy
+      release_sha:
+        description: Full 40-character commit SHA, required only for rollback
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: inputs.operation != 'rollback'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24.21.0'
+          package-manager-cache: false
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: '12.11.2'
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm run test:run
+      - run: python3 -m unittest discover -s scripts -p 'test_*.py' -v
+      - run: pnpm run build
+      - name: Package the tested build
+        run: python3 scripts/package_release.py dist "$GITHUB_SHA" release.tar.gz
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: gmlhub-${{ github.sha }}
+          path: release.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy:
+    needs: verify
+    if: >-
+      always() && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' &&
+      (needs.verify.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.operation == 'rollback'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: production
+    concurrency:
+      group: gmlhub-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Skip a superseded automatic deployment
+        id: latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OPERATION: ${{ inputs.operation || 'deploy' }}
+        run: |
+          publish=true
+          if [[ "$OPERATION" == deploy ]]; then
+            head=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
+            if [[ "$head" != "$GITHUB_SHA" ]]; then
+              publish=false
+              echo 'A newer commit is on main; this deployment is skipped.'
+            fi
+          fi
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        if: steps.latest.outputs.publish == 'true' && inputs.operation != 'rollback'
+        with:
+          name: gmlhub-${{ github.sha }}
+      - name: Publish and check the public release
+        if: steps.latest.outputs.publish == 'true'
+        env:
+          OPERATION: ${{ inputs.operation || 'deploy' }}
+          RELEASE_SHA: ${{ inputs.operation == 'rollback' && inputs.release_sha || github.sha }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: bash scripts/deploy.sh
