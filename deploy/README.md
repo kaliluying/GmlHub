@@ -21,7 +21,7 @@
 - 创建无密码的专用 `gmlhub-deploy` 用户，home 为 `/var/lib/gmlhub-deploy`。仅让其写入 `/www/wwwroot/gmlhub-cicd`；不授予 sudo，不复用 root 密钥。
 - 把 `scripts/deploy_release.py` 安装为 root 所有、部署用户不可写的 `/usr/local/lib/gmlhub-deploy/deploy_release.py`。
 - 为本项目生成独立 Ed25519 密钥。服务器公钥授权使用：`restrict,command="/usr/bin/python3 /usr/local/lib/gmlhub-deploy/deploy_release.py"`，然后跟公钥类型和内容；不允许交互 shell、SCP、端口/agent 转发或 PTY。`.ssh/authorized_keys` 由管理员维护。
-- 管理员维护的 `.ssh` 与 `authorized_keys` 也须允许部署用户读取/遍历（例如 root 所有，权限分别为 0755/0644）；部署用户的 home 可用 0750。应用完整性校验忽略根目录由宝塔生成且禁止公网访问的 `.user.ini`、`.htaccess`，它们不属于构建包，归档仍禁止所有隐藏文件。
+- home、`.ssh` 与 `authorized_keys` 均由 root 维护且允许部署用户读取/遍历，权限分别为 0755/0755/0644；home 也不可由部署用户写入，防止通过替换 `.ssh` 目录改写授权。应用完整性校验忽略根目录由宝塔生成且禁止公网访问的 `.user.ini`、`.htaccess`，它们不属于构建包，归档仍禁止所有隐藏文件。
 - 建立下述目录。将旧站点的 `.well-known` 内容复制到共享目录，并保留旧位置；每个发布版本由接收脚本添加 `.well-known` 指向共享目录的链接。
 - 从当前生产站点的公开静态文件制作 legacy 快照，不复制 `.user.ini` 等管理文件。用 40 个 `0` 标记该历史快照；在改动宝塔 root 前把 `current` 指向该完整快照，记录它不是 Git 提交。
 - 通过宝塔 `HtmlProjectModify(change_path)` 将站点根目录改为 `/www/wwwroot/gmlhub-cicd/current`；将本目录 `nginx.conf` 合并到项目的 rewrite 文件，不覆盖既有无关规则。`nginx -t` 成功后重载 Nginx，并先验证 legacy 快照、`.well-known` 和缓存头。
