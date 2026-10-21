@@ -47,6 +47,13 @@ function createWorker(keys = []) {
 }
 
 describe('service worker cache lifecycle', () => {
+  it('leaves module navigations, assets and API requests to the network', () => {
+    const worker = createWorker()
+    for (const path of ['/one-ip', '/one-ip/network/ip/1.1.1.1', '/one-ip/api/ip/health', '/one-ip/assets/app.js']) {
+      expect(worker.dispatch('fetch', { request: { method: 'GET', mode: 'navigate', url: `${origin}${path}` } }).response).toBeUndefined()
+    }
+    expect(worker.fetch).not.toHaveBeenCalled()
+  })
   it('precaches the built shell without activating a normal update', async () => {
     const worker = createWorker()
     await worker.dispatch('install').done

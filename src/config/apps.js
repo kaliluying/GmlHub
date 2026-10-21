@@ -102,6 +102,32 @@ export const APP_MANIFEST = [
     content: '视频与公开内容发布渠道。',
   },
   {
+    id: 'ip-check',
+    name: 'IP 检测',
+    icon: '◎',
+    color: '#0891B2',
+    url: null,
+    domain: 'ip-check.local',
+    launchMode: 'internal',
+    pluginId: 'ip-check',
+    status: 'local',
+    updatedAt: null,
+    description: '公网 IPv4 / IPv6、归属地、运营商、ASN 与 IP 信誉查询',
+  },
+  {
+    id: 'network-tools',
+    name: '网络工具箱',
+    icon: '◎',
+    color: '#0D9488',
+    url: null,
+    domain: 'network-tools.local',
+    launchMode: 'internal',
+    pluginId: 'network-tools',
+    status: 'local',
+    updatedAt: null,
+    description: 'one-ip 全功能：IP、全球 Ping、测速、DNS / CDN、WHOIS、浏览器检测、AI 检测与服务状态',
+  },
+  {
     id: 'terminal',
     name: '终端',
     icon: '>_',
@@ -232,3 +258,12 @@ export const getInitialApps = () => APP_MANIFEST.map(app => ({
   status: app.launchMode === 'internal' ? 'local' : 'unknown',
   updatedAt: app.launchMode === 'internal' ? null : null,
 }))
+
+export const getAppGroups = (apps) => {
+  const isPersonal = app => app.launchMode === 'internal' && app.pluginId === 'personal-info'
+  return [
+    { id: 'tools', label: '内置工具', description: '在工作台窗口中使用', apps: apps.filter(app => app.launchMode === 'internal' && !isPersonal(app)) },
+    { id: 'links', label: '外部链接', description: '在浏览器新标签页打开', apps: apps.filter(app => app.launchMode !== 'internal') },
+    { id: 'personal', label: '个人信息', description: '简介、联系渠道与技术栈', apps: apps.filter(isPersonal) },
+  ].filter(group => group.apps.length)
+}

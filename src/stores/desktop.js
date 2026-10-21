@@ -1,13 +1,13 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { getInitialApps } from '../config/apps.js'
+import { getAppGroups, getInitialApps } from '../config/apps.js'
 import { createDefaultSettings, normalizeSettings } from '../config/settings.js'
 import {
   loadPortalState as readPortalState,
   savePortalState as writePortalState,
 } from '../services/persistence.js'
 
-const MOBILE_WINDOW_APPS = new Set(['terminal', 'settings', 'profile', 'contact', 'stack', 'project'])
+const MOBILE_WINDOW_APPS = new Set(['terminal', 'settings', 'profile', 'contact', 'stack', 'project', 'ip-check', 'network-tools'])
 
 export const useDesktopStore = defineStore('desktop', () => {
   const apps = ref(getInitialApps())
@@ -67,6 +67,7 @@ export const useDesktopStore = defineStore('desktop', () => {
   const desktopApps = computed(() => apps.value.filter(app => (
     !trashedAppIds.value.includes(app.id) && !removedAppIds.value.includes(app.id)
   )))
+  const desktopAppGroups = computed(() => getAppGroups(desktopApps.value))
 
   const trashedApps = computed(() => apps.value.filter(app => trashedAppIds.value.includes(app.id)))
   const trashCount = computed(() => trashedAppIds.value.length)
@@ -599,6 +600,18 @@ export const useDesktopStore = defineStore('desktop', () => {
     persistPortalState()
   }
 
+  const setSurfaceTheme = (theme) => {
+    if (!['studio', 'midnight'].includes(theme)) return
+    settings.value.surfaceTheme = theme
+    persistPortalState()
+  }
+
+  const setLayoutDensity = (density) => {
+    if (!['comfortable', 'compact'].includes(density)) return
+    settings.value.layoutDensity = density
+    persistPortalState()
+  }
+
   const setMotionLevel = (level) => {
     if (!['low', 'medium', 'high'].includes(level)) return
     settings.value.motionLevel = level
@@ -750,6 +763,7 @@ export const useDesktopStore = defineStore('desktop', () => {
     pinnedApps,
     recentApps,
     desktopApps,
+    desktopAppGroups,
     trashedApps,
     trashCount,
     isMonitoringStatus,
@@ -769,6 +783,8 @@ export const useDesktopStore = defineStore('desktop', () => {
     setIconSize,
     setDockPosition,
     setWallpaper,
+    setSurfaceTheme,
+    setLayoutDensity,
     setMotionLevel,
     setCodeRainEnabled,
     setDockAnimationLevel,

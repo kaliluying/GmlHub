@@ -9,6 +9,48 @@ describe('desktop store', () => {
     vi.restoreAllMocks()
   })
 
+  it('separates tools, external links and personal info without changing launch behavior', () => {
+    const store = useDesktopStore()
+    const ids = () => Object.fromEntries(store.desktopAppGroups.map(group => [group.id, group.apps.map(app => app.id)]))
+    expect(ids()).toEqual({
+      tools: ['ip-check', 'network-tools', 'terminal', 'settings'],
+      links: ['tools', 'wiki', 'vault', 'blog', 'github', 'clipboard-history', 'bilibili'],
+      personal: ['profile', 'contact', 'stack'],
+    })
+    store.reorderDesktopApps('settings', 'ip-check')
+    expect(ids().tools).toEqual(['settings', 'ip-check', 'network-tools', 'terminal'])
+    expect(ids().links).toContain('tools')
+    store.moveAppToTrash('blog')
+    expect(ids().links).not.toContain('blog')
+    store.restoreAppFromTrash('blog')
+    expect(ids().links).toContain('blog')
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+    store.openWindow('tools')
+    expect(openSpy).toHaveBeenCalledWith('https://tools.gmlhub.top', '_blank', 'noopener,noreferrer')
+    store.openWindow('ip-check')
+    expect(store.windows[0].appId).toBe('ip-check')
+  })
+
+  it('opens, focuses and restores IP detection as an internal app without saving query results', () => {
+    const store = useDesktopStore()
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+    store.openWindow('ip-check')
+    const id = store.windows[0].id
+    expect(store.windows[0].pluginId).toBe('ip-check')
+    store.minimizeWindow(id)
+    store.openWindow('ip-check')
+    expect(store.windows).toHaveLength(1)
+    expect(store.windows[0].minimized).toBe(false)
+    expect(openSpy).not.toHaveBeenCalled()
+    setActivePinia(createPinia())
+    const restored = useDesktopStore()
+    restored.loadPortalState()
+    expect(restored.windows[0].appId).toBe('ip-check')
+    expect(restored.windows[0]).not.toHaveProperty('ip')
+    restored.closeWindow(restored.windows[0].id)
+    expect(restored.windows).toHaveLength(0)
+  })
+
   it('opens external apps in new tab and keeps terminal in local window', () => {
     const store = useDesktopStore()
     const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
@@ -43,6 +85,8 @@ describe('desktop store', () => {
     store.setTerminalHistoryLimit(300)
     store.setCodeRainEnabled(false)
     store.setShowServiceReadout(false)
+    store.setSurfaceTheme('midnight')
+    store.setLayoutDensity('compact')
 
     setActivePinia(createPinia())
     const nextStore = useDesktopStore()
@@ -52,6 +96,8 @@ describe('desktop store', () => {
     expect(nextStore.settings.terminalHistoryLimit).toBe(300)
     expect(nextStore.settings.codeRainEnabled).toBe(false)
     expect(nextStore.settings.showServiceReadout).toBe(false)
+    expect(nextStore.settings.surfaceTheme).toBe('midnight')
+    expect(nextStore.settings.layoutDensity).toBe('compact')
   })
 
   it('restarts monitor timer when interval setting changes', () => {

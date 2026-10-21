@@ -580,3 +580,81 @@ button:focus-visible,
     -webkit-backdrop-filter: none;
   }
 }
+
+
+/* Workspace surface system */
+.desktop.surface-studio .window,
+.desktop.surface-studio .dock-surface,
+.desktop.surface-studio .icon-container {
+  border-color: #dbe4ee;
+  background: #ffffff;
+  box-shadow: 0 16px 38px rgba(70, 91, 120, 0.12);
+}
+
+.desktop.surface-studio .window {
+  color: #172033;
+}
+
+.desktop.surface-studio .title-bar {
+  background: #f7faff;
+  border-color: #e1e8f1;
+}
+
+.desktop.surface-studio .window-body {
+  background: #f4f7fb;
+}
+
+.desktop.surface-studio .desktop-icon-label {
+  color: #41516a;
+}
+
+.desktop.surface-studio .app-icon:hover .icon-container {
+  border-color: #9eb8e6;
+  background: #eef4ff;
+  box-shadow: 0 12px 28px rgba(53, 109, 204, 0.16);
+}
+
+.desktop.surface-studio .dock-surface {
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.desktop.surface-studio .dock-icon {
+  border-color: #dbe4ee;
+  background: #f7faff;
+}
+
+.desktop.surface-midnight .window,
+.desktop.surface-midnight .dock-surface,
+.desktop.surface-midnight .icon-container {
+  border-color: rgba(151, 190, 222, 0.2);
+  background: rgba(8, 22, 39, 0.92);
+  color: #ecf4ff;
+  box-shadow: 0 18px 44px rgba(1, 7, 18, 0.42);
+}
+
+.desktop.surface-midnight .title-bar,
+.desktop.surface-midnight .window-body {
+  background: rgba(5, 16, 29, 0.94);
+  border-color: rgba(151, 190, 222, 0.14);
+}
+
+.desktop.surface-midnight .desktop-icon-label {
+  color: #d6e3f3;
+}
+
+.desktop.surface-midnight .dock-surface {
+  background: rgba(7, 18, 32, 0.96);
+}
+
+.desktop.density-compact .app-icon {
+  transform: scale(0.92);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .desktop.surface-studio .window,
+  .desktop.surface-studio .dock-surface,
+  .desktop.surface-midnight .window,
+  .desktop.surface-midnight .dock-surface {
+    backdrop-filter: none;
+  }
+}

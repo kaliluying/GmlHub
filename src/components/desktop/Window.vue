@@ -1,6 +1,6 @@
 <template>
   <div
-    v-if="!window.minimized"
+    v-show="!window.minimized"
     ref="windowRef"
     class="window absolute flex flex-col rounded-2xl overflow-hidden window-shadow transition-shadow"
     :class="{ 'ring-2 ring-sky-400/40': window.focused, 'window-mobile-panel': isMobilePanel }"
@@ -110,7 +110,7 @@ const appPlugin = computed(() => getAppPlugin(props.window.pluginId || props.win
 const pluginProps = computed(() => appPlugin.value?.getProps?.({ window: props.window }) || {})
 
 const isMobilePanel = computed(() => {
-  const mobileApps = ['terminal', 'settings', 'profile', 'contact', 'stack', 'project']
+  const mobileApps = ['terminal', 'settings', 'profile', 'contact', 'stack', 'project', 'ip-check', 'network-tools']
   return viewportWidth.value < 768 && mobileApps.includes(props.window.appId)
 })
 
@@ -364,7 +364,7 @@ onUnmounted(() => {
 }
 
 .window-mobile-panel {
-  min-width: 320px;
+  min-width: min(320px, 100%);
   min-height: 320px;
 }
 
@@ -374,7 +374,7 @@ onUnmounted(() => {
 
 @media (max-width: 767px) {
   .window {
-    min-width: 320px;
+    min-width: min(320px, 100%);
     min-height: 320px;
     border-radius: 0.9rem;
   }
@@ -458,7 +458,7 @@ onUnmounted(() => {
 
 @media (max-width: 767px) {
   .window {
-    min-width: 320px;
+    min-width: min(320px, 100%);
     min-height: 320px;
     border-radius: 1.1rem;
   }

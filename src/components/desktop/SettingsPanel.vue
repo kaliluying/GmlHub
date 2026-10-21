@@ -121,6 +121,23 @@
             <span class="toggle-value">{{ store.settings.codeRainEnabled ? '开启' : '关闭' }}</span>
           </button>
         </div>
+
+        <div class="mt-5 grid gap-3 sm:grid-cols-2">
+          <div>
+            <p class="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-hud-muted">工作区主题</p>
+            <div class="hud-segment">
+              <button class="hud-segment-btn" :class="{ active: store.settings.surfaceTheme === 'studio' }" @click="store.setSurfaceTheme('studio')">工作室</button>
+              <button class="hud-segment-btn" :class="{ active: store.settings.surfaceTheme === 'midnight' }" @click="store.setSurfaceTheme('midnight')">午夜</button>
+            </div>
+          </div>
+          <div>
+            <p class="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-hud-muted">信息密度</p>
+            <div class="hud-segment">
+              <button class="hud-segment-btn" :class="{ active: store.settings.layoutDensity === 'comfortable' }" @click="store.setLayoutDensity('comfortable')">舒适</button>
+              <button class="hud-segment-btn" :class="{ active: store.settings.layoutDensity === 'compact' }" @click="store.setLayoutDensity('compact')">紧凑</button>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section class="settings-card lg:col-span-6">

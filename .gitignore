@@ -31,3 +31,14 @@ dist.zip
 # Local Python deployment checks
 __pycache__/
 *.pyc
+
+# one-ip local runtime and credentials
+.wrangler/
+.worker-check/
+.worker-test/
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.env
+.env.*
+!.env.example

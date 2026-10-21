@@ -1,6 +1,7 @@
 <template>
   <div 
-    class="desktop w-full h-full relative overflow-hidden"
+    class="w-full h-full relative overflow-hidden"
+    :class="desktopShellClasses"
     :style="desktopStyle"
     @contextmenu.prevent="showContextMenu"
   >
@@ -259,36 +260,40 @@
           </div>
         </div>
         <div class="launcher-list">
-          <div
-            v-for="(app, idx) in launcherApps"
-            :key="app.id"
-            class="launcher-item"
-            :class="{ 'is-active': idx === launcher.selectedIndex }"
-            role="button"
-            tabindex="0"
-            :aria-label="`打开 ${app.name}`"
-            @click="openFromLauncher(app.id)"
-            @mousemove="setSelectedIndex(idx)"
-            @keydown.enter.prevent="openFromLauncher(app.id)"
-            @keydown.space.prevent="openFromLauncher(app.id)"
-          >
-            <span class="launcher-item-icon"><IconGlyph :name="app.id" :size="18" /></span>
-            <span class="flex flex-col items-start min-w-0">
-              <span class="font-medium truncate max-w-full">{{ app.name }}</span>
-                <span class="text-xs text-hud-muted truncate max-w-full">{{ app.domain || app.description }}</span>
-            </span>
-            <span class="launcher-actions">
-              <button
-                type="button"
-                class="pin-toggle"
-                :class="{ 'is-pinned': isPinned(app.id) }"
-                @click.stop="togglePinned(app.id)"
-              >
-                ★
-              </button>
-              <span class="launcher-status" :class="`status-${app.status || 'local'}`">{{ statusText(app.status) }}</span>
-            </span>
-          </div>
+          <section v-for="group in launcherGroups" :key="group.id" class="launcher-group" :aria-label="group.label">
+            <h3 class="launcher-group-heading">{{ group.label }}</h3>
+            <div
+              v-for="app in group.apps"
+              :key="app.id"
+              class="launcher-item"
+              :class="{ 'is-active': launcherApps.indexOf(app) === launcher.selectedIndex }"
+              role="button"
+              tabindex="0"
+              :aria-label="`打开 ${app.name}`"
+              @click="openFromLauncher(app.id)"
+              @mousemove="setSelectedIndex(launcherApps.indexOf(app))"
+              @keydown.enter.prevent="openFromLauncher(app.id)"
+              @keydown.space.prevent="openFromLauncher(app.id)"
+            >
+              <span class="launcher-item-icon"><IconGlyph :name="app.id" :size="18" /></span>
+              <span class="flex flex-col items-start min-w-0">
+                <span class="font-medium truncate max-w-full">{{ app.name }}</span>
+                  <span class="text-xs text-hud-muted truncate max-w-full">{{ app.launchMode === 'internal' ? app.description : `${app.domain} · 新标签页打开` }}</span>
+              </span>
+              <span class="launcher-actions">
+                <button
+                  type="button"
+                  class="pin-toggle"
+                  :class="{ 'is-pinned': isPinned(app.id) }"
+                  :aria-label="`${isPinned(app.id) ? '取消置顶' : '置顶'} ${app.name}`"
+                  @click.stop="togglePinned(app.id)"
+                >
+                  ★
+                </button>
+                <span class="launcher-status" :class="`status-${app.status || 'local'}`">{{ statusText(app.status) }}</span>
+              </span>
+            </div>
+          </section>
           <div v-if="!launcherApps.length" class="px-4 py-6 text-center text-sm text-hud-muted">
             没找到匹配应用
           </div>
@@ -311,13 +316,13 @@
       </section>
       <div class="desktop-main-grid">
         <div class="desktop-main-area">
-          <section class="desktop-app-panel" aria-labelledby="app-panel-heading">
+          <section v-for="group in store.desktopAppGroups" :key="group.id" class="desktop-app-panel" :aria-labelledby="`app-panel-${group.id}`">
             <div class="desktop-app-panel-head">
               <div>
-                <span class="desktop-panel-kicker">常用应用 · {{ store.desktopApps.length }}</span>
-                <h2 id="app-panel-heading">你的应用</h2>
+                <span class="desktop-panel-kicker">{{ group.apps.length }} 个入口 · {{ group.description }}</span>
+                <h2 :id="`app-panel-${group.id}`">{{ group.label }}</h2>
               </div>
-              <span class="desktop-panel-hint">按住拖动排序</span>
+              <span class="desktop-panel-hint">组内拖动排序</span>
             </div>
             <div
               class="desktop-icons grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 sm:gap-4 md:gap-5 content-start"
@@ -326,7 +331,7 @@
               @drop.prevent="handleIconGridDrop"
             >
               <AppIcon
-                v-for="app in store.desktopApps"
+                v-for="app in group.apps"
                 :key="app.id"
                 :app="app"
                 :icon-size="store.settings.iconSize"
@@ -447,6 +452,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { gsap } from 'gsap'
 import { useDesktopStore } from '../../stores/desktop.js'
 import { getAppRoute } from '../../services/deepLinks.js'
+import { getAppGroups } from '../../config/apps.js'
 import AppIcon from './AppIcon.vue'
 import Window from './Window.vue'
 import Dock from './Dock.vue'
@@ -588,7 +594,7 @@ const filteredApps = computed(() => {
   })
 })
 
-const launcherApps = computed(() => {
+const rankedLauncherApps = computed(() => {
   const query = launcher.value.query.trim().toLowerCase()
   const pinnedSet = new Set(store.pinnedAppIds)
   const recentSet = new Set(store.recentAppIds)
@@ -607,6 +613,9 @@ const launcherApps = computed(() => {
   const others = store.desktopApps.filter(app => !pinnedSet.has(app.id) && !recentSet.has(app.id))
   return [...pinned, ...recent, ...others]
 })
+
+const launcherGroups = computed(() => getAppGroups(rankedLauncherApps.value))
+const launcherApps = computed(() => launcherGroups.value.flatMap(group => group.apps))
 
 const desktopIconGridClass = computed(() => {
   if (store.settings.iconSize === 'small') return 'md:gap-3'
@@ -913,6 +922,12 @@ const desktopStyle = computed(() => ({
   '--cyber-fx-play-state': isPageVisible.value ? 'running' : 'paused',
 }))
 
+const desktopShellClasses = computed(() => [
+  'desktop',
+  `surface-${store.settings.surfaceTheme || 'studio'}`,
+  `density-${store.settings.layoutDensity || 'comfortable'}`,
+])
+
 const wallpaperStyle = computed(() => {
   return {
     backgroundImage: activePreset.value.wallpaper,
@@ -1200,6 +1215,18 @@ const selectWallpaper = (presetId) => {
 </script>
 
 <style scoped>
+.launcher-group {
+  display: grid;
+  gap: 8px;
+}
+
+.launcher-group-heading {
+  padding: 8px 4px 2px;
+  color: var(--liquid-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .desktop {
   user-select: none;
   --menu-frost: rgba(246, 248, 255, 0.26);
@@ -1430,6 +1457,7 @@ const selectWallpaper = (presetId) => {
 }
 
 .desktop-workspace {
+  height: 100%;
   min-height: calc(100% - 2.25rem);
 }
 
@@ -4513,4 +4541,41 @@ const selectWallpaper = (presetId) => {
     box-shadow: 0 24px 48px rgba(99, 128, 177, 0.16);
   }
 }
+
+/* End-of-file customization layer */
+.desktop.surface-studio .desktop-app-panel,
+.desktop.surface-studio .focus-stage,
+.desktop.surface-studio .widget-card {
+  border-color: #dbe4ee;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 16px 38px rgba(70, 91, 120, 0.1);
+}
+
+.desktop.surface-studio .workspace-hero {
+  border-color: #dbe4ee;
+  background: linear-gradient(120deg, #ffffff 0%, #f7faff 100%);
+  box-shadow: 0 16px 38px rgba(70, 91, 120, 0.1);
+}
+
+.desktop.surface-midnight .desktop-app-panel,
+.desktop.surface-midnight .focus-stage,
+.desktop.surface-midnight .widget-card {
+  border-color: rgba(151, 190, 222, 0.2);
+  background: rgba(8, 22, 39, 0.9);
+  box-shadow: 0 18px 44px rgba(1, 7, 18, 0.42);
+}
+
+.desktop.surface-midnight .workspace-hero {
+  border-color: rgba(151, 190, 222, 0.2);
+  background: linear-gradient(135deg, rgba(9, 35, 57, 0.96), rgba(7, 21, 37, 0.92));
+}
+
+.desktop.surface-midnight .desktop-app-panel-head {
+  border-color: rgba(151, 190, 222, 0.14);
+}
+
+.desktop.surface-midnight .focus-stage::before {
+  background: linear-gradient(145deg, rgba(12, 40, 62, 0.98), rgba(5, 16, 29, 0.98));
+}
+
 </style>

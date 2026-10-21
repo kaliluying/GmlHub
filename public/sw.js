@@ -61,6 +61,9 @@ self.addEventListener('message', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event
   if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return
+  // Keep module routes, live diagnostics and its API outside the desktop offline fallback.
+  const path = new URL(request.url).pathname
+  if (path === '/one-ip' || path.startsWith('/one-ip/')) return
 
   if (request.mode === 'navigate') {
     event.respondWith(

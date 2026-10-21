@@ -4,13 +4,21 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "node scripts/dev.mjs",
+    "setup:one-ip": "pnpm --dir modules/one-ip install --frozen-lockfile --ignore-scripts",
+    "postinstall": "pnpm run setup:one-ip",
+    "build": "pnpm --dir modules/one-ip run build && vite build",
+    "test:one-ip": "pnpm --dir modules/one-ip test",
+    "worker:dev": "pnpm --dir modules/one-ip exec wrangler dev --config ../../server/wrangler.dev.toml --ip 127.0.0.1 --port 8787",
+    "worker:check": "pnpm --dir modules/one-ip exec wrangler deploy --config ../../wrangler.toml --dry-run --outdir .worker-check",
     "preview": "vite preview",
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:run": "vitest run",
     "test:one": "vitest run"
+  },
+  "engines": {
+    "node": ">=24"
   },
   "dependencies": {
     "@vueuse/core": "^14.2.1",

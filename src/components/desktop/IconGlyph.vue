@@ -39,6 +39,11 @@
       <rect x="3" y="6" width="18" height="13" rx="3" />
       <path d="m8 4 2-2M16 4l-2-2M9 11v3M15 11v3" />
     </template>
+    <template v-else-if="name === 'ip-check' || name === 'network-tools'">
+      <circle cx="12" cy="12" r="9" />
+      <ellipse cx="12" cy="12" rx="4" ry="9" />
+      <path d="M3 12h18M5 6.5h14M5 17.5h14" />
+    </template>
     <template v-else-if="name === 'terminal'">
       <rect x="3" y="4" width="18" height="16" rx="2" />
       <path d="m7 9 3 3-3 3M13 15h4" />

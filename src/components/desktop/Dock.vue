@@ -3,42 +3,45 @@
     <div
       ref="dockRef"
       class="dock dock-surface flex items-end gap-2.5 sm:gap-3 px-3 sm:px-[1.125rem] pt-3 pb-2 sm:pb-2.5 rounded-[1.55rem] sm:rounded-[1.8rem] dock-shadow"
+      :class="{ 'is-overflowing': hasDockOverflow }"
       :style="dockBoardStyle"
       @mousemove="handleDockMouseMove"
       @mouseleave="handleDockMouseLeave"
       @scroll="handleDockScroll"
     >
-      <div
-        v-for="(app, index) in store.desktopApps"
-        :key="app.id"
-        class="dock-item relative group"
-        :ref="el => setIconRef(el, index)"
-        @click="handleAppClick(app.id)"
-        @keydown.enter.prevent="handleAppClick(app.id)"
-        @keydown.space.prevent="handleAppClick(app.id)"
-        role="button"
-        tabindex="0"
-        :aria-label="`打开 ${app.name}`"
-      >
+      <template v-for="({ app, group, startsGroup }, index) in dockEntries" :key="app.id">
+        <div v-if="index > 0 && startsGroup" class="dock-divider" role="separator" aria-orientation="vertical" :aria-label="group" />
         <div
-          class="dock-icon rounded-[1.15rem] flex items-center justify-center cursor-pointer border border-white/20"
-          :class="dockIconClass"
-          :style="{ backgroundColor: app.color, ...getIconShellStyle(index) }"
+          class="dock-item relative group"
+          :ref="el => setIconRef(el, index)"
+          @click="handleAppClick(app.id)"
+          @keydown.enter.prevent="handleAppClick(app.id)"
+          @keydown.space.prevent="handleAppClick(app.id)"
+          role="button"
+          tabindex="0"
+          :aria-label="`打开 ${app.name}`"
+          :title="`${app.name} · ${group}${app.launchMode === 'external' ? ' · 新标签页打开' : ''}`"
         >
-          <span class="dock-glyph" :style="getIconStyle(index)">
-            <IconGlyph :name="app.id" :size="store.settings.iconSize === 'large' ? 30 : 24" />
-          </span>
-        </div>
+          <div
+            class="dock-icon rounded-[1.15rem] flex items-center justify-center cursor-pointer border border-white/20"
+            :class="dockIconClass"
+            :style="{ backgroundColor: app.color, ...getIconShellStyle(index) }"
+          >
+            <span class="dock-glyph" :style="getIconStyle(index)">
+              <IconGlyph :name="app.id" :size="store.settings.iconSize === 'large' ? 30 : 24" />
+            </span>
+          </div>
 
-        <div
-          v-if="isAppOpen(app.id)"
-            class="dock-open-indicator"
-        />
+          <div
+            v-if="isAppOpen(app.id)"
+              class="dock-open-indicator"
+          />
 
-        <div class="tooltip dock-tooltip absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1 rounded-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-          {{ app.name }}
+          <div class="tooltip dock-tooltip absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1 rounded-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+            {{ app.name }} · {{ group }}{{ app.launchMode === 'external' ? ' · 新标签页打开' : '' }}
+          </div>
         </div>
-      </div>
+      </template>
 
       <div class="dock-divider" />
 
@@ -88,8 +91,14 @@ const mouseX = ref(null)
 const iconRefs = ref([])
 const canScrollLeft = ref(false)
 const canScrollRight = ref(false)
+const hasDockOverflow = ref(false)
 const supportsHover = typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches
 
+const dockEntries = computed(() => store.desktopAppGroups.flatMap(group => group.apps.map((app, index) => ({
+  app,
+  group: group.label,
+  startsGroup: index === 0,
+}))))
 const trashIndex = computed(() => store.desktopApps.length)
 
 const dockAnimationProfiles = {
@@ -116,7 +125,7 @@ const getCenterX = (index) => {
 }
 
 const getInfluence = (index) => {
-  if (!supportsHover || mouseX.value == null) {
+  if (!supportsHover || hasDockOverflow.value || mouseX.value == null) {
     return {
       influence: 0,
       eased: 0,
@@ -183,12 +192,7 @@ const handleDockMouseLeave = () => {
 
 const updateDockScrollHints = () => {
   if (typeof window === 'undefined' || !dockRef.value) {
-    canScrollLeft.value = false
-    canScrollRight.value = false
-    return
-  }
-
-  if (window.innerWidth >= 768) {
+    hasDockOverflow.value = false
     canScrollLeft.value = false
     canScrollRight.value = false
     return
@@ -196,6 +200,7 @@ const updateDockScrollHints = () => {
 
   const element = dockRef.value
   const hasOverflow = element.scrollWidth - element.clientWidth > 2
+  hasDockOverflow.value = hasOverflow
   if (!hasOverflow) {
     canScrollLeft.value = false
     canScrollRight.value = false
@@ -383,6 +388,7 @@ watch(
 }
 
 .dock-divider {
+  flex: 0 0 1px;
   width: 1px;
   height: 2.4rem;
   margin: 0 0.4rem;
@@ -442,6 +448,32 @@ watch(
 
 .dock-scroll-fade {
   display: none;
+}
+
+.dock.is-overflowing {
+  overflow-x: auto;
+}
+
+@media (min-width: 768px) {
+  .dock-scroll-fade {
+    position: absolute;
+    display: block;
+    pointer-events: none;
+    top: 0;
+    bottom: 0;
+    width: 18px;
+    border-radius: 12px;
+  }
+
+  .dock-scroll-fade-left {
+    left: 0;
+    background: linear-gradient(to right, #e8eef5, transparent);
+  }
+
+  .dock-scroll-fade-right {
+    right: 0;
+    background: linear-gradient(to left, #e8eef5, transparent);
+  }
 }
 
 @media (max-width: 767px) {

@@ -6,6 +6,7 @@ umask 077
 [[ "$DEPLOY_HOST" =~ ^[a-zA-Z0-9.-]+$ && "$DEPLOY_PORT" =~ ^[0-9]+$ && "$DEPLOY_USER" == gmlhub-deploy ]]
 [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
 [[ "$OPERATION" == deploy || "$OPERATION" == rollback ]]
+if [[ "${1:-}" == --check-only ]]; then exit 0; fi
 
 key_dir=$(mktemp -d)
 trap 'rm -rf "$key_dir"' EXIT

@@ -16,6 +16,14 @@ export const getAppPlugin = (id) => appPlugins.get(id) || null
 
 registerAppPlugins([
   {
+    id: 'network-tools',
+    component: defineAsyncComponent(() => import('../components/desktop/NetworkToolsPanel.vue')),
+  },
+  {
+    id: 'ip-check',
+    component: defineAsyncComponent(() => import('../components/desktop/IpCheckPanel.vue')),
+  },
+  {
     id: 'terminal',
     component: defineAsyncComponent(() => import('../components/desktop/TerminalPanel.vue')),
     getProps: ({ window }) => ({ windowId: window.id }),

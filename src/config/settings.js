@@ -1,6 +1,8 @@
 export const DEFAULT_SETTINGS = Object.freeze({
   wallpaper: 'deep-net',
   wallpaperColor: '#1a1a2e',
+  surfaceTheme: 'studio',
+  layoutDensity: 'comfortable',
   showDock: true,
   showServiceReadout: true,
   dockPosition: 'bottom',
@@ -20,6 +22,8 @@ const VALID_DOCK_POSITIONS = new Set(['bottom'])
 const VALID_MOTION_LEVELS = new Set(['low', 'medium', 'high'])
 const VALID_HISTORY_LIMITS = new Set([30, 100, 300])
 const VALID_MONITOR_INTERVALS = new Set([15000, 30000, 45000, 60000])
+const VALID_SURFACE_THEMES = new Set(['studio', 'midnight'])
+const VALID_LAYOUT_DENSITIES = new Set(['comfortable', 'compact'])
 
 export const createDefaultSettings = () => ({ ...DEFAULT_SETTINGS })
 
@@ -30,6 +34,8 @@ export const normalizeSettings = (value) => {
   return {
     wallpaper: typeof parsed.wallpaper === 'string' ? parsed.wallpaper : defaults.wallpaper,
     wallpaperColor: typeof parsed.wallpaperColor === 'string' ? parsed.wallpaperColor : defaults.wallpaperColor,
+    surfaceTheme: VALID_SURFACE_THEMES.has(parsed.surfaceTheme) ? parsed.surfaceTheme : defaults.surfaceTheme,
+    layoutDensity: VALID_LAYOUT_DENSITIES.has(parsed.layoutDensity) ? parsed.layoutDensity : defaults.layoutDensity,
     showDock: typeof parsed.showDock === 'boolean' ? parsed.showDock : defaults.showDock,
     showServiceReadout: typeof parsed.showServiceReadout === 'boolean'
       ? parsed.showServiceReadout
