@@ -55,6 +55,8 @@ pnpm run worker:check
 
 CI 在不持有生产凭据的 verify job 中构建并测试两套前端和 Worker；deploy job 下载同一次运行的已验证产物，先部署 Worker 并核对提交号、真实公开 IP 查询、首页、深层页面与入口脚本，再发布宝塔桌面。`pnpm run worker:check` 只做本地打包，**不会发布**。生产 Secrets、重试和跨平台回滚边界见 [部署说明](../deploy/README.md)。凭据未配置或发布检查失败时，不会继续发布桌面；本地通过不等于生产已上线。
 
+网络模块静态响应追加 `Cache-Control: no-transform` 并保留原缓存规则，避免 Cloudflare 自动注入统计脚本改变页面字节及指纹环境；不修改域名的全局统计或安全设置。[Cloudflare 说明](https://developers.cloudflare.com/web-analytics/faq/)
+
 ## 集成决策
 
 保留完整上游 React/Worker 模块，Vue 通过本地 iframe 接入，使 React/Tailwind 4 与现有 Vue/Tailwind 3 隔离；无需将所有网络诊断重写为 Vue。所有业务探测保持上游实现。上游禁止跨站嵌入的策略在自己的本地副本收敛为 **仅允许同源嵌入**，没有使用在线站点 iframe。

@@ -34,6 +34,7 @@ export default {
     }
     if (!isModule) return response
     const headers = new Headers(response.headers)
+    headers.append('Cache-Control', 'no-transform')
     headers.set('Content-Security-Policy', contentSecurityPolicy)
     headers.set('X-Frame-Options', 'SAMEORIGIN')
     headers.set('X-Content-Type-Options', 'nosniff')

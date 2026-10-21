@@ -40,6 +40,17 @@ describe('one-ip mount and security boundaries', () => {
     expect(fetch).not.toHaveBeenCalled()
   })
 
+  it('prevents proxy payload rewriting while preserving asset caching and bytes', async () => {
+    const body = '<html>network diagnostics</html>'
+    const fetch = async () => new Response(body, { headers: { 'Cache-Control': 'public, max-age=0, must-revalidate' } })
+    const env = { ASSETS: { fetch } }
+    const response = await worker.fetch(request('/one-ip/index.html'), env)
+    expect(await response.text()).toBe(body)
+    expect(response.headers.get('Cache-Control')).toBe('public, max-age=0, must-revalidate, no-transform')
+    const desktop = await worker.fetch(request('/index.html'), env)
+    expect(desktop.headers.get('Cache-Control')).toBe('public, max-age=0, must-revalidate')
+  })
+
   it('serves nested navigation including dotted IPv4 details from its own index', async () => {
     const fetch = vi.fn(async (req) => new URL(req.url).pathname === '/one-ip/index.html'
       ? new Response('one-ip app', { headers: { 'Content-Type': 'text/html' } })
