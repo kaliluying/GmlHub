@@ -1,8 +1,11 @@
 {
-  "status.currentHealthComponentsIncidentsOfficialStatusApis": "Current health, components and incidents from official status APIs",
   "status.loadingOfficialStatus": "Loading official status…",
   "status.currentStatus": "Current status",
   "status.updated": "Updated",
+  "status.updateFailed": "Update failed",
+  "status.lookupFailed": "Check failed",
+  "status.lastKnownStatus": "Last result: {0}",
+  "status.lastSuccessfulUpdate": "Last successful update: {0}",
   "status.serviceComponents": "Service components",
   "status.currentIncidents": "Current incidents",
   "status.theOfficialApiReportsNoUnresolvedIncidents": "The official API reports no unresolved incidents.",
@@ -82,7 +85,6 @@
   "status.unableIdentifyRequestEgressSpecifyIpParameter": "Unable to identify the request egress. Specify the ip parameter.",
   "status.thirdPartySourceUptimerobotMonitorsTelegramOrgWebsite": "Third-party source: UptimeRobot. Monitors telegram.org website availability only, not global Telegram messaging. Stale or unavailable data is shown as unconfirmed.",
   "status.thirdParty": "Third party · {0} ↗",
-  "status.serviceStatusIncidentsThirdPartySourcesLabeledSeparately": "Service status and incidents; third-party sources are labeled separately",
   "status.sourceProvidesAggregateStatusSeeSourcePageIncident": "This source provides aggregate status only. See the source page for incident details.",
   "status.sourceCheckedAt": "Source checked at: {0}"
 }

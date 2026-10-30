@@ -4,7 +4,7 @@ export function tlsFingerprint(request) {
   const text = (value) =>
     typeof value === "string" && value.length > 0 ? value : null;
   return {
-    source: "cloudflare",
+    source: cf ? "cloudflare" : null,
     ja3: text(cf?.botManagement?.ja3Hash),
     ja4: text(cf?.botManagement?.ja4),
     tlsVersion: text(cf?.tlsVersion),

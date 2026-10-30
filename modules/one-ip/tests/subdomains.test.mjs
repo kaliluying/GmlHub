@@ -5,7 +5,7 @@ import {
   certificateNames,
   subdomainTarget,
   lookupSubdomains,
-} from "../public/worker/subdomains.js";
+} from "../worker/subdomains.js";
 
 test("subdomain targets normalize IDNs and reject URLs, IPs and wildcard queries", () => {
   assert.equal(subdomainTarget(" Example.COM. "), "example.com");

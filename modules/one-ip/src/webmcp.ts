@@ -25,19 +25,21 @@ export type ModelContext = {
 const empty = { type: "object", properties: {} };
 const text = (description: string) => ({ type: "string", description });
 const pages = [
-  "/",
-  "/network",
-  "/browser",
-  "/ai",
-  "/status",
-  "/status/openai",
-  "/status/claude",
-  "/docs/api",
-  "/terms",
-  "/privacy",
-  ...Object.values(toolGroups)
-    .flat()
-    .map((route) => route.path),
+  ...new Set([
+    "/",
+    "/lookup",
+    "/network",
+    "/browser",
+    "/ai",
+    "/ai/status/openai",
+    "/ai/status/claude",
+    "/docs/api",
+    "/terms",
+    "/privacy",
+    ...Object.values(toolGroups)
+      .flat()
+      .map((route) => route.path),
+  ]),
 ];
 
 function required(input: Input, key: string, max = 253) {

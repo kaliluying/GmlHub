@@ -7,8 +7,8 @@ import {
   inputJson,
   upstream,
   HttpError,
-} from "../public/worker/http.js";
-import { mapConfig } from "../public/worker/map.js";
+} from "../worker/http.js";
+import { mapConfig } from "../worker/map.js";
 import {
   mockPingVerification,
   pingVerification,

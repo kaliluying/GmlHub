@@ -1,6 +1,5 @@
 import { lazy, Suspense, useEffect, useRef } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { BuildInfo } from "@/components/build-info";
 import { HomePageSkeleton } from "@/components/home-page-skeleton";
 import { LanguageSelect } from "@/components/language-select";
 import { AppUpdateChecker } from "@/components/providers/app-update-checker";
@@ -14,24 +13,28 @@ import { useAvailableTools } from "@/hooks/use-available-tools";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTheme } from "@/hooks/use-theme";
 import { t } from "@/i18n";
-import { Search, Globe, Cable, Activity, Sparkles } from "lucide-react";
+import { Cable, Globe, House, Search, Sparkles } from "lucide-react";
 import { Tabs } from "radix-ui";
 import { Toaster } from "sonner";
 import { DesktopNavigation } from "./desktop-navigation";
-import { MobileToolNavigation } from "./mobile-tool-navigation";
 import type { NavigationMenus } from "./navigation-menus";
 import { RouteErrorBoundary } from "./route-error-boundary";
 import { activeNavigationRoute, navigationRoutes, toolGroups } from "./routes";
+import { SectionTabs } from "./section-tabs";
 
 const MobileNavGlass = lazy(() => import("@/components/mobile-nav-glass"));
+// Console-only metadata; keep date-fns out of the entry chunk.
+const BuildInfo = lazy(() =>
+  import("@/components/build-info").then((m) => ({ default: m.BuildInfo })),
+);
 const currentYear = new Date().getFullYear();
 
 const menuIcons = {
-  "/": Search,
-  "/browser/": Globe,
+  "/": House,
+  "/lookup/": Search,
   "/network/": Cable,
+  "/browser/": Globe,
   "/ai/": Sparkles,
-  "/status/": Activity,
 };
 
 const options = navigationRoutes.map((route) => {
@@ -57,10 +60,21 @@ export function AppLayout() {
   const activeRoute = activeNavigationRoute(pathname);
   const browserTools = useAvailableTools("browser");
   const menus: NavigationMenus = {
+    "/lookup/": toolGroups.lookup,
     "/network/": toolGroups.network,
     "/browser/": browserTools,
     "/ai/": toolGroups.ai,
   };
+
+  useEffect(() => {
+    if (mobile) return;
+    const update = () => {
+      navRef.current?.setAttribute("data-scrolled", String(window.scrollY > 8));
+    };
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    return () => window.removeEventListener("scroll", update);
+  }, [mobile]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -105,16 +119,6 @@ export function AppLayout() {
             <ThemeToggleButton className="size-8 rounded-full text-muted-foreground" />
           </div>
         </header>
-        {mobile && menus[activeRoute] && (
-          <MobileToolNavigation
-            label={
-              navigationRoutes.find((route) => route.value === activeRoute)!
-                .label
-            }
-            overviewPath={activeRoute.replace(/\/$/, "")}
-            items={menus[activeRoute]!}
-          />
-        )}
         <AnimatedSegmentedTabs
           label={t("navigation.diagnostics")}
           options={options}
@@ -152,7 +156,7 @@ export function AppLayout() {
                   <ScrollBar orientation="horizontal" />
                 </ScrollArea>
               ) : (
-                <DesktopNavigation menus={menus} activeRoute={activeRoute} />
+                <DesktopNavigation activeRoute={activeRoute} />
               )}
               <div className="desktop-preferences flex items-center gap-1">
                 <ShareSite />
@@ -172,6 +176,16 @@ export function AppLayout() {
             asChild
           >
             <main className="outline-none">
+              {menus[activeRoute] && (
+                <SectionTabs
+                  label={
+                    navigationRoutes.find(
+                      (route) => route.value === activeRoute,
+                    )!.label
+                  }
+                  items={menus[activeRoute]!}
+                />
+              )}
               <RouteErrorBoundary key={activeRoute}>
                 <Suspense
                   fallback={
@@ -231,9 +245,7 @@ export function AppLayout() {
           </UnderlineHover>{" "}
           ·{" "}
           <UnderlineHover asChild>
-            <a href="https://ipbot.net">
-              {t("navigation.ipbotCommercialSite")}
-            </a>
+            <a href="https://ipbot.net">IPBot</a>
           </UnderlineHover>
         </footer>
       </div>
@@ -243,7 +255,9 @@ export function AppLayout() {
       >
         <AppUpdateChecker />
       </aside>
-      <BuildInfo />
+      <Suspense fallback={null}>
+        <BuildInfo />
+      </Suspense>
       <Toaster richColors theme={resolvedTheme} position="top-right" />
     </>
   );

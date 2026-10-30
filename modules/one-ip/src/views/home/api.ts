@@ -1,4 +1,5 @@
 import { t } from "@/i18n";
+import { sameIp } from "@/lib/ip-address";
 import { localizeCatalogItem } from "@/lib/localize-catalog";
 import { endpoint, probe, request, trace } from "@/lib/network";
 import type { Geo } from "@/lib/types";
@@ -18,12 +19,13 @@ export async function getGeo(
       `https://api.ip.sb/geoip/${encodeURIComponent(ip)}`,
       options(),
     );
-    if (!data.ip || (!data.country && !data.isp))
+    if (!sameIp(data?.ip, ip) || (!data.country && !data.isp))
       throw new Error(t("home.incompleteLocationInformation"));
     return { ...data, ip, source: "ip.sb" };
   } catch {
     signal?.throwIfAborted();
     const data = await request<{
+      ip?: string;
       success: boolean;
       country?: string;
       country_code?: string;
@@ -34,7 +36,7 @@ export async function getGeo(
       longitude?: number;
       timezone?: { id?: string };
     }>(`https://ipwho.is/${encodeURIComponent(ip)}`, options());
-    if (!data.success)
+    if (data?.success !== true || !sameIp(data.ip, ip))
       throw new Error(t("home.locationDetailsAreUnavailablePleaseRetryLater"));
     return {
       ip,

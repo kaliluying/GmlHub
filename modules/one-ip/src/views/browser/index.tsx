@@ -338,7 +338,7 @@ function Checks({ page }: { page: string }) {
 export default function BrowserPage({ page }: { page: string }) {
   return (
     <div className="browser-diagnostics">
-      <PageHeading title={titles[page]} description="" />
+      <PageHeading title={titles[page]} />
       {page === "environment" ? (
         <ToolCard title={t("common.browserEnvironment")}>
           <Facts

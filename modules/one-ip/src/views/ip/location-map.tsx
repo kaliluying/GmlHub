@@ -3,12 +3,16 @@ import { ToolCard, Pending } from "@/components/toolkit";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 import { attachMapLayers, loadMapConfig, mapExternalUrl } from "@/lib/map";
+import { maskedIp } from "@/lib/network";
 import type { Geo } from "@/lib/types";
+import { hideIpAtom } from "@/store/privacy";
+import { useAtomValue } from "jotai";
 import type { Map as LeafletMap } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { ExternalLink, LocateFixed } from "lucide-react";
 
 export function LocationMap({ geo }: { geo: Geo }) {
+  const hidden = useAtomValue(hideIpAtom);
   const { latitude, longitude } = geo;
   const valid =
     typeof latitude === "number" &&
@@ -73,7 +77,10 @@ export function LocationMap({ geo }: { geo: Geo }) {
             L.tileLayer,
             mapInstance,
             config,
-            () => setLoaded(true),
+            () => {
+              setLoaded(true);
+              setTileError(false);
+            },
             () => setTileError(true),
           );
         });
@@ -161,10 +168,13 @@ export function LocationMap({ geo }: { geo: Geo }) {
             <div
               ref={container}
               className="ip-location-map exit-map"
-              aria-label={t("ip.approximateLocationOf", [geo.ip])}
+              aria-label={t("ip.approximateLocationOf", [
+                maskedIp(geo.ip, hidden),
+              ])}
+              aria-busy={!loaded && !tileError}
             />
             {!loaded && !tileError && (
-              <div className="ip-map-loading">
+              <div className="ip-map-loading" role="status">
                 <Pending>{t("ip.loadingMap")}</Pending>
               </div>
             )}

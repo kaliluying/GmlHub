@@ -77,7 +77,7 @@ export default function CdnPage() {
   const busy = queries.some((query) => query.isFetching);
   return (
     <>
-      <PageHeading title={t("cdn.cdnServingNodes")} description="" />
+      <PageHeading title={t("cdn.cdnServingNodes")} />
       <div className="toolbar">
         <ActionButton busy={busy} onClick={() => setRound((n) => n + 1)}>
           {busy ? t("common.checkingDots") : t("common.runAgain")}

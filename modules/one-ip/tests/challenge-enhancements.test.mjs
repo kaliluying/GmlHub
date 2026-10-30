@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { createRequire } from "node:module";
 import { compile } from "./compile.mjs";
-import { challengeConfig, verifyChallenge } from "../public/worker/challenges.js";
+import { challengeConfig, verifyChallenge } from "../worker/challenges.js";
 import { compareExits } from "../src/views/claude/api.ts";
 import { t } from "../src/i18n/index.ts";
 import { localizeApiMessage } from "../src/i18n/api-message.ts";

@@ -182,13 +182,6 @@
   "speedtest.title": "Speed test",
   "speedtest.description": "Measure download, upload, idle latency, and latency under load.",
   "speedtest.endpoint": "Cloudflare global edge network",
-  "speedtest.provider": "Test service",
-  "speedtest.openSpeedtestDescription": "Free, officially hosted download, upload, and latency tests.",
-  "speedtest.openSpeedtestPanel": "OpenSpeedTest speed test panel",
-  "speedtest.loadPanel": "Load test panel",
-  "speedtest.loadingPanel": "Loading test panel…",
-  "speedtest.panelFailed": "The panel could not load. Try again or switch to Cloudflare.",
-  "speedtest.openSpeedtestNotice": "After loading, use the panel's start button to test. OpenSpeedTest manages data usage. Stopping, switching services, or moving to the background closes the panel.",
   "speedtest.start": "Start test",
   "speedtest.stop": "Stop",
   "speedtest.single": "Single",
@@ -218,5 +211,7 @@
   "speedtest.uploadNotice": "Upload speed and data update after successful requests; interrupted transfers may consume more. Data totals count payload only, excluding protocol overhead.",
   "speedtest.invalidResponse": "The test endpoint did not return valid measurement data",
   "speedtest.noSamples": "No valid speed samples were collected",
-  "speedtest.failed": "Test incomplete. Check that your network or proxy can reach speed.cloudflare.com and try again."
+  "speedtest.failed": "Test incomplete. Check that your network or proxy can reach speed.cloudflare.com and try again.",
+  "dns.resolvedIn": "Where your DNS resolves",
+  "dns.resolverCount": "{0} resolvers"
 }

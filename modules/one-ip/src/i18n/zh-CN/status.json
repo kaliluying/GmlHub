@@ -1,8 +1,11 @@
 {
-  "status.currentHealthComponentsIncidentsOfficialStatusApis": "来自官方状态接口的当前运行状态、组件状态与事件",
   "status.loadingOfficialStatus": "正在读取官方状态…",
   "status.currentStatus": "当前状态",
   "status.updated": "更新于",
+  "status.updateFailed": "更新失败",
+  "status.lookupFailed": "查询失败",
+  "status.lastKnownStatus": "上次结果：{0}",
+  "status.lastSuccessfulUpdate": "上次成功：{0}",
   "status.serviceComponents": "服务组件",
   "status.currentIncidents": "当前事件",
   "status.theOfficialApiReportsNoUnresolvedIncidents": "官方接口当前没有未解决事件。",
@@ -82,7 +85,6 @@
   "status.unableIdentifyRequestEgressSpecifyIpParameter": "无法识别请求出口，请指定 ip 参数。",
   "status.thirdPartySourceUptimerobotMonitorsTelegramOrgWebsite": "第三方来源：UptimeRobot。仅监测 telegram.org 网站可用性，不代表 Telegram 全球消息收发状态；数据过期或不可用时显示待确认。",
   "status.thirdParty": "第三方 · {0} ↗",
-  "status.serviceStatusIncidentsThirdPartySourcesLabeledSeparately": "各服务运行状态与故障事件，第三方来源单独标注",
   "status.sourceProvidesAggregateStatusSeeSourcePageIncident": "此数据源仅提供汇总状态，事件详情请查看来源页面。",
   "status.sourceCheckedAt": "来源检测时间：{0}"
 }

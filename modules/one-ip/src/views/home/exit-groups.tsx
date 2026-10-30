@@ -168,7 +168,7 @@ export function ExitGroups({
                                 key === "unreachable"
                                   ? "text-destructive"
                                   : key === "egress-unreadable"
-                                    ? "text-amber-700 dark:text-amber-300"
+                                    ? "text-warning"
                                     : "text-muted-foreground"
                               }
                             >
@@ -240,7 +240,7 @@ export function ExitGroups({
           </p>
         )}
         {selected === "egress-unreadable" && (
-          <p className="mb-2 text-sm text-amber-700 dark:text-amber-300">
+          <p className="mb-2 text-sm text-warning">
             {t("home.websiteReachableButEgressIpWasNotReadable")}
           </p>
         )}
@@ -260,7 +260,7 @@ export function ExitGroups({
                 key={row.name}
                 asChild
                 variant="secondary"
-                className={`h-8 max-w-full gap-1.5 px-2.5 [&_.site-icon]:size-4 ${selected === "unreachable" ? "bg-destructive/10 text-destructive" : selected === "egress-unreadable" ? "bg-amber-500/10 text-amber-700 dark:text-amber-300" : ""}`}
+                className={`h-8 max-w-full gap-1.5 px-2.5 [&_.site-icon]:size-4 ${selected === "unreachable" ? "bg-destructive/10 text-destructive" : selected === "egress-unreadable" ? "bg-warning/10 text-warning" : ""}`}
               >
                 <a
                   href={url}

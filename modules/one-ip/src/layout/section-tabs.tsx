@@ -1,21 +1,20 @@
 import { useEffect, useRef } from "react";
-import { Link, NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { UnderlineHover } from "@/components/underline-hover";
-import { t } from "@/i18n";
 import type { NavigationItem } from "./navigation-menus";
+import { activeTool } from "./routes";
 
-export function MobileToolNavigation({
+/** Tabs for the tools inside one section, shown on every screen size. */
+export function SectionTabs({
   label,
-  overviewPath,
   items,
 }: {
   label: string;
-  overviewPath: string;
   items: readonly NavigationItem[];
 }) {
   const { pathname } = useLocation();
   const navRef = useRef<HTMLElement>(null);
+  const current = activeTool(pathname);
 
   useEffect(() => {
     const viewport = navRef.current?.querySelector<HTMLElement>(
@@ -37,25 +36,17 @@ export function MobileToolNavigation({
   }, [pathname, items]);
 
   return (
-    <nav ref={navRef} className="mobile-tool-navigation" aria-label={label}>
+    <nav ref={navRef} className="section-tabs" aria-label={label}>
       <ScrollArea>
-        <div className="mobile-tool-navigation-links">
-          <UnderlineHover asChild>
-            <Link
-              to={overviewPath}
-              aria-current={
-                pathname.replace(/\/+$/, "") === overviewPath
-                  ? "page"
-                  : undefined
-              }
-            >
-              {t("navigation.overviewTab")}
-            </Link>
-          </UnderlineHover>
+        <div className="section-tabs-links">
           {items.map((item) => (
-            <UnderlineHover key={item.path} asChild>
-              <NavLink to={item.path}>{item.label}</NavLink>
-            </UnderlineHover>
+            <NavLink
+              key={item.path}
+              to={item.path}
+              aria-current={item.path === current ? "page" : undefined}
+            >
+              {item.label}
+            </NavLink>
           ))}
         </div>
         <ScrollBar orientation="horizontal" />

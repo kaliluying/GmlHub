@@ -18,7 +18,7 @@ export function IpSearch() {
       onSubmit={(event) => {
         event.preventDefault();
         const value = ip.trim();
-        if (value) navigate(`/network/ip/${encodeURIComponent(value)}`);
+        if (value) navigate(`/lookup/ip/${encodeURIComponent(value)}`);
       }}
     >
       <InputGroup>
@@ -34,17 +34,18 @@ export function IpSearch() {
           value={ip}
           onChange={(event) => setIp(event.target.value)}
         />
-        <InputGroupAddon align="inline-end">
-          <InputGroupButton
-            type="submit"
-            size="icon-xs"
-            aria-label={t("common.lookup")}
-            title={t("common.lookup")}
-            disabled={!ip.trim()}
-          >
-            <ArrowRight aria-hidden="true" />
-          </InputGroupButton>
-        </InputGroupAddon>
+        {ip.trim() && (
+          <InputGroupAddon align="inline-end">
+            <InputGroupButton
+              type="submit"
+              size="icon-xs"
+              aria-label={t("common.lookup")}
+              title={t("common.lookup")}
+            >
+              <ArrowRight aria-hidden="true" />
+            </InputGroupButton>
+          </InputGroupAddon>
+        )}
       </InputGroup>
     </form>
   );

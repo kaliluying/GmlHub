@@ -72,7 +72,6 @@ export default function AiDiagnostics({ kind }: { kind: "claude" | "gpt" }) {
             ? t("ai.claudeAiNetworkCheck")
             : t("ai.chatgptCodexNetworkCheck")
         }
-        description=""
       />
       <div className="ai-overview">
         <ToolCard

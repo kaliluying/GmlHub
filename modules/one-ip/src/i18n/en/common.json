@@ -1,6 +1,5 @@
 {
   "navigation.documentation": "Documentation",
-  "navigation.ipbotCommercialSite": "IPBot commercial site",
   "navigation.fullGuide": "Full user guide",
   "common.copied": "Copied",
   "common.copy": "Copy",
@@ -282,5 +281,6 @@
   "share.scanCopyLinkOpenPage": "Scan or copy the link to open this page.",
   "share.scanToOpenThisPage": "Scan to open this page",
   "share.currentPageLink": "Current page link",
-  "navigation.pageTransition": "Page navigation"
+  "navigation.pageTransition": "Page navigation",
+  "navigation.lookup": "Lookup"
 }

@@ -7,32 +7,35 @@ export const navigationRoutes = [
     label: t("navigation.overview"),
     short: t("navigation.overview"),
   },
-  { value: "/ai/", label: t("navigation.aiChecks"), short: "AI" },
   {
-    value: "/status/",
-    label: t("navigation.serviceStatus"),
-    short: t("common.status"),
+    value: "/lookup/",
+    label: t("navigation.lookup"),
+    short: t("navigation.lookup"),
   },
   {
     value: "/network/",
-    label: t("navigation.networkChecks"),
+    label: t("navigation.network"),
     short: t("navigation.network"),
   },
   {
     value: "/browser/",
-    label: t("navigation.browserChecks"),
+    label: t("navigation.browser"),
     short: t("navigation.browser"),
   },
+  { value: "/ai/", label: "AI", short: "AI" },
 ] as const;
+/** Each section is one page; its tools are tabs inside that page. */
 export const toolGroups = {
+  lookup: [
+    { path: "/lookup/ip", label: t("navigation.ipCheck") },
+    { path: "/lookup/whois", label: "WHOIS" },
+    { path: "/lookup/subdomains", label: t("common.subdomainLookup") },
+  ],
   network: [
     { path: "/network/connectivity", label: t("common.connectivityEgress") },
-    { path: "/network/speedtest", label: t("speedtest.title") },
     { path: "/network/dns", label: t("common.dnsEgress") },
     { path: "/network/cdn", label: t("navigation.cdnNodes") },
-    { path: "/network/ip", label: t("navigation.ipCheck") },
-    { path: "/network/subdomains", label: t("common.subdomainLookup") },
-    { path: "/network/whois", label: "WHOIS" },
+    { path: "/network/speedtest", label: t("speedtest.title") },
     { path: "/network/ping", label: t("common.globalPing") },
   ],
   browser: [
@@ -43,19 +46,27 @@ export const toolGroups = {
     { path: "/browser/privacy", label: t("common.permissionsPrivacy") },
     { path: "/browser/challenges", label: t("common.humanVerification") },
   ],
-  ai: aiPlatforms.map((platform) => ({
-    path: `/ai/${platform.id}`,
-    label: platform.name,
-  })),
+  ai: [
+    ...aiPlatforms.map((platform) => ({
+      path: `/ai/${platform.id}`,
+      label: platform.name,
+    })),
+    { path: "/ai/status", label: t("navigation.serviceStatus") },
+  ],
 } as const;
+export type ToolGroup = keyof typeof toolGroups;
 export const legacyRoutes: Record<string, string> = {
-  "/query": "/network/ip",
-  "/query/ip": "/network/ip",
-  "/query/ip/:ip": "/network/ip",
-  "/query/whois": "/network/whois",
-  "/ip": "/network/ip",
-  "/ip/:ip": "/network/ip",
-  "/whois": "/network/whois",
+  "/query": "/lookup/ip",
+  "/query/ip": "/lookup/ip",
+  "/query/ip/:ip": "/lookup/ip",
+  "/query/whois": "/lookup/whois",
+  "/ip": "/lookup/ip",
+  "/ip/:ip": "/lookup/ip",
+  "/whois": "/lookup/whois",
+  "/network/ip": "/lookup/ip",
+  "/network/ip/:ip": "/lookup/ip",
+  "/network/whois": "/lookup/whois",
+  "/network/subdomains": "/lookup/subdomains",
   "/link": "/network/connectivity",
   "/network/link": "/network/connectivity",
   "/network/exits": "/network/connectivity",
@@ -68,10 +79,13 @@ export const legacyRoutes: Record<string, string> = {
   "/browser/webrtc": "/browser/privacy",
   "/gpt": "/ai/gpt",
   "/claude": "/ai/claude",
-  "/gpt/status.html": "/status/openai",
-  "/claude/status.html": "/status/claude",
-  "/ai/gpt/status": "/status/openai",
-  "/ai/claude/status": "/status/claude",
+  "/status": "/ai/status",
+  "/status/openai": "/ai/status/openai",
+  "/status/claude": "/ai/status/claude",
+  "/gpt/status.html": "/ai/status/openai",
+  "/claude/status.html": "/ai/status/claude",
+  "/ai/gpt/status": "/ai/status/openai",
+  "/ai/claude/status": "/ai/status/claude",
 };
 export function activeNavigationRoute(pathname: string) {
   const path = pathname.replace(/\/+$/, "") || "/";
@@ -80,16 +94,20 @@ export function activeNavigationRoute(pathname: string) {
     if (path === `/${group}` || routes.some((route) => route.path === path))
       return `/${group}/`;
   }
-  if (/^\/network\/ip\/[^/]+$/.test(path)) return "/network/";
-  return /^\/status(?:\/(?:openai|claude))?$/.test(path)
-    ? "/status/"
-    : "not-found";
+  if (/^\/lookup\/ip\/[^/]+$/.test(path)) return "/lookup/";
+  return /^\/ai\/status\/(?:openai|claude)$/.test(path) ? "/ai/" : "not-found";
 }
 
-export function visibleTools(
-  group: keyof typeof toolGroups,
-  challengesConfigured: boolean,
-) {
+/** The tab that owns a path, including detail pages below a tab. */
+export function activeTool(pathname: string) {
+  const path = pathname.replace(/\/+$/, "");
+  return Object.values(toolGroups)
+    .flat()
+    .find((tool) => path === tool.path || path.startsWith(`${tool.path}/`))
+    ?.path;
+}
+
+export function visibleTools(group: ToolGroup, challengesConfigured: boolean) {
   return toolGroups[group].filter(
     (tool) => tool.path !== "/browser/challenges" || challengesConfigured,
   );

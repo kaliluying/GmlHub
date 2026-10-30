@@ -182,13 +182,6 @@
   "speedtest.title": "网络测速",
   "speedtest.description": "测试下载、上传速度，以及空闲和负载下的网络延迟。",
   "speedtest.endpoint": "Cloudflare 全球边缘网络",
-  "speedtest.provider": "测速服务",
-  "speedtest.openSpeedtestDescription": "官方免费托管测速，支持下载、上传和延迟测试。",
-  "speedtest.openSpeedtestPanel": "OpenSpeedTest 测速面板",
-  "speedtest.loadPanel": "加载测速面板",
-  "speedtest.loadingPanel": "正在加载测速面板…",
-  "speedtest.panelFailed": "面板未能加载，请重试或切换 Cloudflare 测速。",
-  "speedtest.openSpeedtestNotice": "加载后点击面板内的开始按钮测速，流量用量由 OpenSpeedTest 管理。停止、切换服务或切到后台会关闭面板。",
   "speedtest.start": "开始测速",
   "speedtest.stop": "停止",
   "speedtest.single": "单连接",
@@ -218,5 +211,7 @@
   "speedtest.uploadNotice": "上传速度和流量随请求成功后更新；中断时实际消耗可能更高。流量仅统计有效负载，不含协议开销。",
   "speedtest.invalidResponse": "测速节点未返回有效的测速数据",
   "speedtest.noSamples": "未获得有效速度样本",
-  "speedtest.failed": "测速未完成，请检查网络或代理是否能访问 speed.cloudflare.com 后重试。"
+  "speedtest.failed": "测速未完成，请检查网络或代理是否能访问 speed.cloudflare.com 后重试。",
+  "dns.resolvedIn": "DNS 解析出口位于",
+  "dns.resolverCount": "{0} 个解析器"
 }

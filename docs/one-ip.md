@@ -1,6 +1,6 @@
 # one-ip 完整集成
 
-来源：<https://github.com/zhihui-hu/one-ip>，固定版本 `8dff832f7af9be9f3c812402dd680395ec081c0c`。模块源码与原许可证在 `modules/one-ip/`，实际修改版源码随生产构建提供下载。
+来源：<https://github.com/zhihui-hu/one-ip>，固定版本 `1cea733a934906ea3ee5290051d3687750aca4b4`。模块源码与原许可证在 `modules/one-ip/`，实际修改版源码随生产构建提供下载。
 
 ## 功能与入口
 
@@ -65,4 +65,4 @@ CI 在不持有生产凭据的 verify job 中构建并测试两套前端和 Work
 
 进程管理借鉴 CodeVault `supervised-task-process-lifecycle` 的退出联动、限时终止约束，采用 Node 子进程组适配，未引入其 Python 抽象。当前开发脚本以 macOS/Linux 为验收目标，Windows 子孙进程强制清理尚未验收。
 
-升级时核对 `UPSTREAM.json`、路径适配、本地补丁、许可证、全量上游测试和真实浏览器。运行证据另见 `outputs/one-ip-2026-10-20/`，不要把固定版本测试结果视为后续版本保证。
+升级时核对 `UPSTREAM.json`、路径适配、本地补丁、许可证、全量上游测试和真实浏览器。运行证据另见 `outputs/one-ip-2026-10-20/`，不要把固定版本测试结果视为后续版本保证。上游 2026-10-27 更新已按本地 Worker 路径、同源嵌入和故障降级边界适配。

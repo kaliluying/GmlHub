@@ -22,8 +22,40 @@ export function registrationTarget(query) {
   return target(ascii);
 }
 
+// IANA bootstrap files change rarely. Workers also honour `cf.cacheTtl`;
+// the Cache API keeps runtimes without edge fetch caching (Node) bounded.
+async function bootstrapJson(url, signal) {
+  const cache = globalThis.caches?.default;
+  const key = new Request(url);
+  const cached = await cache?.match(key).catch(() => undefined);
+  if (cached) {
+    const data = await cached.json().catch(() => undefined);
+    if (data?.services) return data;
+  }
+  const data = await upstream(url, {
+    cf: { cacheTtl: 86400, cacheEverything: true },
+    signal,
+  });
+  if (cache && Array.isArray(data?.services))
+    await cache
+      .put(
+        key,
+        Response.json(data, {
+          headers: { "Cache-Control": "public, max-age=86400" },
+        }),
+      )
+      .catch(() => {});
+  return data;
+}
+
 export async function lookupRegistration(query) {
   const raw = registrationTarget(query);
+  // Leave room for the browser's 12-second request deadline and IP fallback.
+  const signal = AbortSignal.timeout(10_000);
+  const options = {
+    headers: { Accept: "application/rdap+json, application/json" },
+    signal,
+  };
   let path;
   let endpoint;
   if (/^AS\d+$/.test(raw)) path = `autnum/${raw.slice(2)}`;
@@ -31,9 +63,10 @@ export async function lookupRegistration(query) {
   else {
     const domain = raw;
     path = `domain/${encodeURIComponent(domain)}`;
-    const bootstrap = await upstream("https://data.iana.org/rdap/dns.json", {
-      cf: { cacheTtl: 86400, cacheEverything: true },
-    });
+    const bootstrap = await bootstrapJson(
+      "https://data.iana.org/rdap/dns.json",
+      AbortSignal.any([signal, AbortSignal.timeout(2000)]),
+    );
     const urls = bootstrap.services.find(([suffixes]) =>
       suffixes.includes(domain.split(".").at(-1)),
     )?.[1];
@@ -41,20 +74,20 @@ export async function lookupRegistration(query) {
     if (!base) throw new HttpError(422, "该域名后缀暂无可用的 HTTPS RDAP 服务");
     endpoint = new URL(path, base.endsWith("/") ? base : `${base}/`).href;
   }
-  const options = {
-    headers: { Accept: "application/rdap+json, application/json" },
-  };
   let data;
   try {
-    data = await upstream(endpoint ?? `https://rdap.org/${path}`, options);
+    data = await upstream(endpoint ?? `https://rdap.org/${path}`, {
+      ...options,
+      signal: isIP(raw)
+        ? AbortSignal.any([signal, AbortSignal.timeout(4000)])
+        : signal,
+    });
   } catch (error) {
-    if (!isIP(raw)) throw error;
+    if (!isIP(raw) || signal.aborted) throw error;
     const ip = publicIp(raw);
-    const bootstrap = await upstream(
+    const bootstrap = await bootstrapJson(
       `https://data.iana.org/rdap/ipv${isIP(ip)}.json`,
-      {
-        cf: { cacheTtl: 86400, cacheEverything: true },
-      },
+      AbortSignal.any([signal, AbortSignal.timeout(2000)]),
     );
     const base = registrationServer(ip, bootstrap.services);
     if (!base) throw error;

@@ -39,10 +39,7 @@ export default function WhoisPage() {
   return (
     <div className="lookup-page">
       <div className="lookup-search-card">
-        <PageHeading
-          title={t("common.whoisLookup")}
-          description={t("whois.lookUpDomainIpOrAsnRegistration")}
-        />
+        <PageHeading title={t("common.whoisLookup")} />
         <LookupForm
           grouped
           value={q}

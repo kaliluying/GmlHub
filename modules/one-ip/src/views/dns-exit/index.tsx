@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { CountryFlag } from "@/components/country-flag";
 import { DataTable } from "@/components/data-table";
 import { NumberTicker } from "@/components/number-ticker";
 import { OverflowDetailText } from "@/components/overflow-detail-text";
@@ -11,6 +12,7 @@ import {
 } from "@/components/toolkit";
 import { Card, CardContent } from "@/components/ui/card";
 import { t } from "@/i18n";
+import { countryName } from "@/lib/country";
 import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { LegacyColumnDef as ColumnDef } from "@tanstack/react-table/legacy";
 import { detectDnsExits, dnsSampleCount, type DnsProgress } from "./api";
@@ -26,10 +28,13 @@ const columns: ColumnDef<Resolver>[] = [
     accessorKey: "geo",
     header: t("dns.locationIsp"),
     cell: ({ row }) => (
-      <OverflowDetailText
-        text={row.original.geo}
-        title={t("dns.dnsLocationDetails")}
-      />
+      <span className="flex min-w-0 items-center gap-2">
+        <CountryFlag code={row.original.country} />
+        <OverflowDetailText
+          text={row.original.geo}
+          title={t("dns.dnsLocationDetails")}
+        />
+      </span>
     ),
   },
   {
@@ -54,6 +59,42 @@ const columns: ColumnDef<Resolver>[] = [
     cell: ({ row }) => <NumberTicker value={row.original.samples} />,
   },
 ];
+function DnsCountrySummary({ results }: { results: Resolver[] }) {
+  const groups = new Map<string, Resolver[]>();
+  for (const resolver of results) {
+    const key = resolver.country ?? "";
+    groups.set(key, [...(groups.get(key) ?? []), resolver]);
+  }
+  if (!groups.size) return null;
+  return (
+    <section className="dns-country-summary" aria-label={t("dns.resolvedIn")}>
+      <h2>{t("dns.resolvedIn")}</h2>
+      <div className="dns-country-grid">
+        {[...groups]
+          .sort(([, a], [, b]) => b.length - a.length)
+          .map(([country, items]) => (
+            <div className="dns-country-card" key={country || "unknown"}>
+              <CountryFlag code={country} size="xl" />
+              <div className="min-w-0">
+                <strong>
+                  {countryName(country) ?? t("common.unknownRegion")}
+                </strong>
+                <span>
+                  {[...new Set(items.flatMap((item) => item.isp ?? []))]
+                    .slice(0, 3)
+                    .join(" · ") || "—"}
+                </span>
+              </div>
+              <span className="dns-country-count">
+                {t("dns.resolverCount", [items.length])}
+              </span>
+            </div>
+          ))}
+      </div>
+    </section>
+  );
+}
+
 export default function DnsExitPage() {
   const [round, setRound] = useState(0);
   const client = useQueryClient();
@@ -78,7 +119,7 @@ export default function DnsExitPage() {
     : (query.data ?? progress.data);
   return (
     <>
-      <PageHeading title={t("dns.dnsEgressLookup")} description="" />
+      <PageHeading title={t("dns.dnsEgressLookup")} />
       <div className="toolbar">
         <ActionButton
           busy={query.isFetching}
@@ -87,9 +128,8 @@ export default function DnsExitPage() {
           {query.isFetching ? t("common.checkingDots") : t("common.runAgain")}
         </ActionButton>
         <span className="small muted">
-          <NumberTicker value={state?.count ?? 0} />/{dnsSampleCount}
-          {t("dns.samples")} {state?.failed ?? 0}
-          {t("dns.failures")}
+          <NumberTicker value={state?.count ?? 0} />/{dnsSampleCount}{" "}
+          {t("dns.samples")} {state?.failed ?? 0} {t("dns.failures")}
         </span>
       </div>
       <ErrorNotice error={query.error} />
@@ -101,6 +141,7 @@ export default function DnsExitPage() {
             .join(" · ")}
         </p>
       )}
+      <DnsCountrySummary results={state?.results ?? []} />
       <Card>
         <CardContent>
           <DataTable

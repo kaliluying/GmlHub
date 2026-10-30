@@ -154,8 +154,8 @@ export function EnvironmentScore() {
     high: t("claude.highRisk"),
   }[risk];
   const color = {
-    low: "text-emerald-600",
-    medium: "text-amber-600",
+    low: "text-success",
+    medium: "text-warning",
     high: "text-destructive",
   }[risk];
   const recommendations = [
@@ -212,8 +212,8 @@ export function EnvironmentScore() {
                   pending
                     ? "shrink-0 text-muted-foreground"
                     : unavailable
-                      ? "shrink-0 text-amber-600"
-                      : "shrink-0 text-emerald-600"
+                      ? "shrink-0 text-warning"
+                      : "shrink-0 text-success"
                 }
               >
                 [
@@ -258,8 +258,8 @@ export function EnvironmentScore() {
               networkBusy
                 ? "text-muted-foreground"
                 : country
-                  ? "text-emerald-600"
-                  : "text-amber-600"
+                  ? "text-success"
+                  : "text-warning"
             }
           >
             [

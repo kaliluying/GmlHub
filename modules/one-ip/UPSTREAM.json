@@ -1,7 +1,7 @@
 {
   "repository": "https://github.com/zhihui-hu/one-ip",
-  "commit": "8dff832f7af9be9f3c812402dd680395ec081c0c",
+  "commit": "1cea733a934906ea3ee5290051d3687750aca4b4",
   "license": "AGPL-3.0-only",
-  "imported_at": "2026-10-20",
+  "imported_at": "2026-10-30",
   "integration_notes": "../../docs/one-ip.md"
 }

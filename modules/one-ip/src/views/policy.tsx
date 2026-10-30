@@ -76,7 +76,6 @@ export default function PolicyPage({ page }: { page: "terms" | "privacy" }) {
     <div className="space-y-3">
       <PageHeading
         title={page === "terms" ? t("policy.terms") : t("policy.privacy")}
-        description=""
       />
       {sections[page].map(([title, body]) => (
         <ToolCard key={title} title={title}>

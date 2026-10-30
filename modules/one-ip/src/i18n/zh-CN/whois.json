@@ -1,5 +1,4 @@
 {
-  "whois.lookUpDomainIpOrAsnRegistration": "查询域名、IP 或 ASN 注册信息",
   "whois.enterADomainIpAddressOrAsNumber": "输入域名、IP 地址或 AS 号",
   "whois.queryingTheRegistry": "正在向注册局查询…",
   "whois.basicInformation": "基础信息",

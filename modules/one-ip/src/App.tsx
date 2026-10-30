@@ -7,7 +7,6 @@ import {
   useLocation,
   useParams,
 } from "react-router-dom";
-import { PageHelpAlert } from "@/components/page-help-alert";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 import { AppLayout } from "@/layout";
@@ -16,7 +15,6 @@ import { ToolLayout } from "@/layout/tool-layout";
 import { aiPlatforms } from "@/views/ai/platforms";
 
 const PlatformDiagnostics = lazy(() => import("@/views/ai"));
-const ModuleOverview = lazy(() => import("@/views/module-overview"));
 const HomePage = lazy(() => import("@/views/home"));
 const ClaudePage = lazy(() => import("@/views/claude"));
 const GptPage = lazy(() => import("@/views/gpt"));
@@ -58,27 +56,30 @@ export function App() {
         <Route path="docs/api" element={<ApiUsagePage />} />
         <Route path="terms" element={<PolicyPage page="terms" />} />
         <Route path="privacy" element={<PolicyPage page="privacy" />} />
-        <Route path="network" element={<ToolLayout />}>
-          <Route
-            index
-            element={<ModuleOverview key="network" group="network" />}
-          />
+        <Route path="lookup" element={<ToolLayout />}>
+          <Route index element={<Navigate replace to="/lookup/ip" />} />
           <Route path="ip">
             <Route index element={<IpPage />} />
             <Route path=":ip" element={<IpPage />} />
           </Route>
-          <Route path="subdomains" element={<SubdomainsPage />} />
           <Route path="whois" element={<WhoisPage />} />
+          <Route path="subdomains" element={<SubdomainsPage />} />
+        </Route>
+        <Route path="network" element={<ToolLayout />}>
+          <Route
+            index
+            element={<Navigate replace to="/network/connectivity" />}
+          />
           <Route path="connectivity" element={<LinkPage />} />
-          <Route path="ping" element={<PingPage />} />
-          <Route path="speedtest" element={<SpeedtestPage />} />
-          <Route path="cdn" element={<CdnPage />} />
           <Route path="dns" element={<DnsExitPage />} />
+          <Route path="cdn" element={<CdnPage />} />
+          <Route path="speedtest" element={<SpeedtestPage />} />
+          <Route path="ping" element={<PingPage />} />
         </Route>
         <Route path="browser" element={<ToolLayout />}>
           <Route
             index
-            element={<ModuleOverview key="browser" group="browser" />}
+            element={<Navigate replace to="/browser/environment" />}
           />
           {[
             "environment",
@@ -96,7 +97,7 @@ export function App() {
           <Route path="challenges" element={<ChallengesPage />} />
         </Route>
         <Route path="ai" element={<ToolLayout />}>
-          <Route index element={<ModuleOverview key="ai" group="ai" />} />
+          <Route index element={<Navigate replace to="/ai/gpt" />} />
           <Route path="gpt" element={<GptPage />} />
           <Route path="claude" element={<ClaudePage />} />
           {aiPlatforms
@@ -110,19 +111,11 @@ export function App() {
                 }
               />
             ))}
-        </Route>
-        <Route path="status">
-          <Route
-            index
-            element={
-              <>
-                <PageHelpAlert />
-                <StatusPage />
-              </>
-            }
-          />
-          <Route path="openai" element={<GptStatusPage />} />
-          <Route path="claude" element={<ClaudeStatusPage />} />
+          <Route path="status">
+            <Route index element={<StatusPage />} />
+            <Route path="openai" element={<GptStatusPage />} />
+            <Route path="claude" element={<ClaudeStatusPage />} />
+          </Route>
         </Route>
         {Object.entries(legacyRoutes).map(([from, to]) => (
           <Route key={from} path={from} element={<Redirect to={to} />} />

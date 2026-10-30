@@ -328,7 +328,7 @@ export function HumanVerification({
 export default function ChallengesPage() {
   return (
     <>
-      <PageHeading title={t("common.humanVerification")} description="" />
+      <PageHeading title={t("common.humanVerification")} />
       <HumanVerification />
     </>
   );

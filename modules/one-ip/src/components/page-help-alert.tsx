@@ -22,7 +22,7 @@ const descriptions: Record<string, string> = {
     "pageHelp.tryThirdPartyVerificationBrowserViewActualResult",
   ),
 
-  "/network/whois": t("pageHelp.lookUpRegistrationDetailsDomainIpAsnIncluding"),
+  "/lookup/whois": t("pageHelp.lookUpRegistrationDetailsDomainIpAsnIncluding"),
   "/network/ping": t("pageHelp.testLatencyPacketLossRegionsAroundWorldCompare"),
   "/network/cdn": t("pageHelp.seeWhichCdnNodesNetworkReachesWhereContent"),
   "/network/dns": t(
@@ -37,11 +37,13 @@ const descriptions: Record<string, string> = {
   "/ai/claude": t(
     "pageHelp.checkNetworkEgressConnectivityClaudeServicesTroubleshootAccess",
   ),
-  "/status": t("pageHelp.viewOfficialServiceHealthIncidentsSeeWhetherServices"),
-  "/status/openai": t(
+  "/ai/status": t(
+    "pageHelp.viewOfficialServiceHealthIncidentsSeeWhetherServices",
+  ),
+  "/ai/status/openai": t(
     "pageHelp.viewOfficialOpenaiServiceHealthIncidentsIdentifyAffected",
   ),
-  "/status/claude": t(
+  "/ai/status/claude": t(
     "pageHelp.viewOfficialClaudeServiceHealthIncidentsIdentifyAffected",
   ),
 };
@@ -88,8 +90,8 @@ function DismissibleHelp({ page, text }: { page: string; text: string }) {
 export function PageHelpAlert() {
   const { pathname } = useLocation();
   const normalized = pathname.replace(/\/+$/, "") || "/";
-  const page = /^\/network\/ip\/[^/]+$/.test(normalized)
-    ? "/network/ip"
+  const page = /^\/lookup\/ip\/[^/]+$/.test(normalized)
+    ? "/lookup/ip"
     : normalized;
   const text = descriptions[page];
   return text ? <DismissibleHelp key={page} page={page} text={text} /> : null;

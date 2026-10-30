@@ -39,7 +39,68 @@ IP 查询、网络诊断、浏览器检测与 AI 服务状态工具箱。
 
 国内网络访问地图时，建议在 Worker → Settings → Variables and Secrets 配置 `TIANDITU_TOKEN`（也可以用 `pnpm exec wrangler secret put TIANDITU_TOKEN`）。配置后地图优先使用天地图，失败时回退到 OpenStreetMap；未配置时保持 OpenStreetMap。
 
+默认地图无需注册或 API Key。OpenStreetMap 公共瓦片须遵守[使用政策](https://operations.osmfoundation.org/policies/tiles/)，保留地图署名、按需加载并使用浏览器缓存，不提供离线下载或批量预取；公共服务不保证可用性。瓦片请求仅发送本站 origin 作为 Referer，不包含查询 IP 的页面路径。地图加载失败时可单独重试，位置文字和坐标仍可查看。
+
 Workers Builds 会在 `main` 收到提交时构建和部署。上方按钮使用原项目地址；需要保留 Fork 关系和更新工作流时，请按教程导入你的 Fork。
+
+### Cloudflare Pages 部署
+
+Pages 使用同一套 API，通过 [Advanced mode](https://developers.cloudflare.com/pages/functions/advanced-mode/) 打包为 `dist-pages/_worker.js`。`_routes.json` 只让 API 和后端保护路径进入函数，页面和静态资源直接由 Pages 提供。不要把普通 `dist` 当作完整的 Pages 部署产物。
+
+**控制台连接 Git 仓库：** 创建 Pages 项目，框架预设选择 None，根目录保持仓库根目录；构建命令填写 `pnpm build:pages`，输出目录填写 `dist-pages`。构建环境使用 `NODE_VERSION=24`、`PNPM_VERSION=10.32.1`。在生产和预览环境的 Functions 设置中填写兼容日期 `2026-09-09`，添加 `nodejs_compat`。根目录的 `wrangler.toml` 服务于 Workers；Pages 的 CLI 配置单独位于 `deploy/pages/wrangler.toml`。
+
+**CLI 直接部署：**
+
+```bash
+pnpm install --frozen-lockfile
+pnpm build:pages
+pnpm exec wrangler login
+# 首次部署时创建项目；已有项目跳过此行
+pnpm exec wrangler pages project create one-ip --production-branch main
+pnpm deploy:pages --branch main
+```
+
+项目名称在 `deploy/pages/wrangler.toml` 中修改。可选密钥在 Pages 项目的生产/预览环境中分别配置，或使用 `pnpm exec wrangler pages secret put 名称 --cwd deploy/pages`。已有 `.secrets.production.env` 时，可执行 `node scripts/sync-worker-secrets.mjs production --pages`。本地预览使用 `pnpm pages:dev`，需要先执行 `pnpm build:pages`；预览用的密钥放在 `deploy/pages/.dev.vars`。
+
+### Docker 部署
+
+Docker 镜像包含前端和 Node.js API 服务，可独立运行，不需要另设 Worker。Compose 配置需要 Docker Compose 2.24 或更新版本。多阶段构建只将静态资源、API 服务和许可证放入运行镜像，默认使用非 root 用户。
+
+```bash
+# 可选：填写地图和验证服务配置，已有文件请直接编辑
+cp .env.docker.example .env.docker
+docker compose up -d --build
+```
+
+打开 `http://服务器地址:8080`。宿主机端口可通过 `PORT=8088 docker compose up -d --build` 修改。也可以手动构建和运行：
+
+```bash
+docker build -t one-ip:local .
+docker run -d --name one-ip --restart unless-stopped -p 8080:8080 --env-file .env.docker one-ip:local
+```
+
+环境变量在容器启动时读取，修改后执行 `docker compose up -d --force-recreate`；密钥不会编译进前端。`/healthz` 是容器健康检查入口，不依赖外部数据源。本机直接运行同一服务可用 `pnpm build:docker` 后执行 `pnpm start`。
+
+生产环境建议在前方配置 HTTPS 反向代理，浏览器部分检测需要安全上下文。默认使用 TCP 连接地址，不信任请求中自带的 `CF-Connecting-IP` 或转发头。使用代理时，在 `.env.docker` 的 `TRUSTED_PROXIES` 中填写紧邻容器的代理 IP 或专用 CIDR，多个值用逗号分隔。以下 Nginx 示例用于同机代理；同时用 `BIND_ADDRESS=127.0.0.1 docker compose up -d --build` 限制端口仅在本机监听，并按容器实际看到的代理地址配置白名单：
+
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+代理须覆盖转发头。服务仅信任白名单代理提供的最后一跳访客地址；多层代理需在入口完成真实 IP 解析。白名单代理没有传 `X-Forwarded-For` 时，日志会输出一次 `proxy_missing_client_ip`。
+
+`PUBLIC_ORIGIN` 填写访客实际使用的地址（如 `https://ip.example.com`）。设置后，同源校验和人机验证域名都以它为准，不再依赖代理传 `X-Forwarded-Proto`。HTTPS 代理不在白名单中时，必须设置此项，否则 Ping 和人机验证的 POST 请求会被同源校验拒绝。
+
+Docker 前面套 Cloudflare 代理时，可设置 `TRUST_CF_CONNECTING_IP=true`，从白名单代理转发的 `CF-Connecting-IP` 读取访客地址。白名单须为 [Cloudflare IP 段](https://www.cloudflare.com/ips/)，或只接受 Cloudflare 回源流量的代理；其他来源带的此请求头会被丢弃。
+
+Docker 访客归属地使用公开数据源；私网连接地址不会当作公网出口。Docker 缺少 Cloudflare 的 JA3/JA4/TLS 元数据时返回空值。Docker 用进程内缓存替代 Cloudflare 边缘缓存，最多 1000 条、32 MB，按接口原有的 TTL 过期，重启后清空。
+
+Workers 使用原生限流。Pages 和 Docker 使用每个实例内的内存限流（普通查询/图标各 180 次/分钟，POST 5 次/分钟），IPv6 按 /64 计数，重启会重置，多个实例不共享计数。Pages 的计数分散在多个边缘实例中，基本不起作用；需要严格限流时，在 Cloudflare 控制台为 `/api/*` 配置 WAF 限流规则。
 
 ## 功能
 
@@ -137,13 +198,16 @@ One IP 面向企业提供闭源商业版本及配套服务，适合网络与浏�
 
 Workers Builds 和 GitHub Actions 选择一种部署方式，避免重复发布。Actions 默认执行构建和测试；开启部署需要在仓库的 Actions 设置中添加：
 
-| 类型     | 名称                    | 用途                       |
-| -------- | ----------------------- | -------------------------- |
-| Variable | `ENABLE_CF_DEPLOY=true` | 开启部署                   |
-| Secret   | `CLOUDFLARE_API_TOKEN`  | 目标账户的 Worker 部署凭证 |
-| Secret   | `CLOUDFLARE_ACCOUNT_ID` | 目标 Cloudflare 账户 ID    |
+| 类型     | 名称                    | 用途                              |
+| -------- | ----------------------- | --------------------------------- |
+| Variable | `ENABLE_CF_DEPLOY=true` | 开启部署                          |
+| Variable | `CF_DEPLOY_TARGET`      | `workers`（默认）或 `pages`       |
+| Secret   | `CLOUDFLARE_API_TOKEN`  | 对应目标的 Workers/Pages 部署凭证 |
+| Secret   | `CLOUDFLARE_ACCOUNT_ID` | 目标 Cloudflare 账户 ID           |
 
 推送到 `main`，或运行 `Build and deploy one-ip`。构建和测试通过后进入部署。外部 PR 执行测试，不获得部署凭证。这些凭证用于 CI。
+
+选择 `pages` 时先创建与 `deploy/pages/wrangler.toml` 同名的 Pages 项目。使用 Pages Git 集成时，无需开启 Actions 部署。
 
 ## 本地开发与部署
 
@@ -184,7 +248,7 @@ node scripts/sync-worker-secrets.mjs production --check
 node scripts/sync-worker-secrets.mjs production
 ```
 
-脚本上传非空项，保留已有 Secret，跳过缺失的可选文件。敏感文件在 Git 忽略列表中。Secret 应放在 Worker 配置中，不能放进 `VITE_*`。`/api/browser/challenges` 的 `configured` 字段用于检查配置结果。
+脚本上传非空项，保留已有 Secret，跳过缺失的可选文件。Pages 加 `--pages`；Docker 使用 `.env.docker`。敏感文件在 Git 忽略列表中。Secret 应放在服务端配置中，不能放进 `VITE_*`。`/api/browser/challenges` 的 `configured` 字段用于检查配置结果。
 
 reCAPTCHA 使用 v3 评分型密钥。服务端校验 hostname、`browser_check` action 和 score，通过阈值为 0.5。v2 复选框和 Enterprise assessment 不在支持范围内，生产环境不接受 localhost。
 
@@ -193,7 +257,7 @@ reCAPTCHA 使用 v3 评分型密钥。服务端校验 hostname、`browser_check`
 数据来源按版本区分：开源版本使用互联网公开可访问的数据和第三方公开接口；闭源商业版本支持私有化部署，使用私有部署环境中的数据。具体数据范围、留存方式和使用权限以商业方案及合同约定为准。
 
 - `src/app.css`：界面样式；`src/components/ui`：shadcn/ui 组件。
-- `src/views`：网络、浏览器、AI 与状态页面；`public/worker`：Worker API。
+- `src/views`：网络、浏览器、AI 与状态页面；`worker`：Worker API。
 - Net.Coffee：IP 详情，展示字段取决于接口返回。
 - IP 类型补充查询由 Worker 服务端调用 ip-api 免费 HTTP 接口，无需 API Key，保留缓存与限流退避；接口使用范围见[官方说明](https://ip-api.com/docs/api:json)。
 - Globalping：全球测量；IANA / RDAP：注册资料；各平台官方状态源：运行状态。

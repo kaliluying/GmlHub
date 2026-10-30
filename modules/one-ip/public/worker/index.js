@@ -3,13 +3,14 @@ import { cachedJson } from "./cache.js";
 import { challengeConfig, verifyChallenge } from "./challenges.js";
 import { getCloudStatus } from "./cloud-status.js";
 import { cfGeo, geoIp, secondaryGeo } from "./geo.js";
-import { HttpError, inputJson, json, publicIp } from "./http.js";
+import { clientIp, HttpError, inputJson, json, publicIp } from "./http.js";
 import { siteIcon } from "./icons.js";
 import { ipHealth } from "./ip-health.js";
 import { ipNetwork } from "./ip-network.js";
 import { ipType } from "./ip-type.js";
 import { mapConfig } from "./map.js";
 import { startPing, pingResult, pingNodes } from "./ping.js";
+import { rateLimit } from "./rate-limit.js";
 import { normalizeStatus } from "./service-status.js";
 import services from "./services.json";
 import { lookupSubdomains, subdomainTarget } from "./subdomains.js";
@@ -22,7 +23,7 @@ export default {
     const url = new URL(request.url);
     if (url.pathname === "/worker" || url.pathname.startsWith("/worker/"))
       return new Response("Not found", { status: 404 });
-    if (!url.pathname.startsWith("/api/")) {
+    if (url.pathname !== "/api" && !url.pathname.startsWith("/api/")) {
       if (env.LOCAL_DEV === "true") {
         url.hostname = "127.0.0.1";
         url.port = "5137";
@@ -37,7 +38,7 @@ export default {
         throw new HttpError(403, "仅支持同源调用");
       if (!["GET", "POST"].includes(request.method))
         throw new HttpError(405, "不支持此请求方法");
-      const key = request.headers.get("CF-Connecting-IP") ?? "local";
+      const key = clientIp(request) ?? "local";
       const path = url.pathname.slice(4).replace(/\/$/, "");
       const limiter =
         request.method === "POST"
@@ -45,7 +46,20 @@ export default {
           : path.startsWith("/icons/")
             ? (env.ICON_LIMITER ?? env.API_LIMITER)
             : env.API_LIMITER;
-      if (limiter && !(await limiter.limit({ key })).success)
+      const bucket =
+        request.method === "POST"
+          ? "action"
+          : path.startsWith("/icons/")
+            ? "icon"
+            : "api";
+      if (
+        !(await rateLimit(
+          limiter,
+          key,
+          bucket,
+          request.method === "POST" ? 5 : 180,
+        ))
+      )
         throw new HttpError(429, "请求过于频繁，请一分钟后重试");
       if (path === "/dns" || path.startsWith("/dns/"))
         throw new HttpError(404, "接口不存在");
@@ -72,9 +86,21 @@ export default {
         if (!data.ip || key === "local" || env.LOCAL_DEV === "true")
           throw new HttpError(
             503,
-            "本地环境没有真实访客 IP，请部署 Worker 后检测；不会使用示例 IP。",
+            "当前环境没有真实访客公网 IP，请检查部署的访客 IP 配置；不会使用示例 IP。",
           );
-        return json(data);
+        try {
+          publicIp(data.ip);
+        } catch {
+          throw new HttpError(
+            503,
+            "当前环境没有真实访客公网 IP，请检查部署的访客 IP 配置；不会使用示例 IP。",
+          );
+        }
+        return json(
+          request.clientIpSource
+            ? await geoIp(data.ip).catch(() => data)
+            : data,
+        );
       }
       if (path === "/ip/health") return await ipHealth(request, env);
       if (path.startsWith("/ip-type/"))
@@ -159,7 +185,7 @@ export default {
           env,
           url.hostname,
           "ping_start",
-          request.headers.get("CF-Connecting-IP") ?? undefined,
+          clientIp(request) ?? undefined,
         );
         if (!verification.success)
           throw new HttpError(403, verification.message);

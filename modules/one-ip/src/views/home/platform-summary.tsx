@@ -5,7 +5,7 @@ import { Pending } from "@/components/toolkit";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { UnderlineHover } from "@/components/underline-hover";
 import { useSortAnimation } from "@/hooks/use-sort-animation";
-import { t } from "@/i18n";
+import { t, locale } from "@/i18n";
 import { localizeCatalogItem } from "@/lib/localize-catalog";
 import { aiPlatforms } from "@/views/ai/platforms";
 import { probeAiDomain } from "@/views/ai/probe";
@@ -152,7 +152,7 @@ export function PlatformSummary() {
           <div className="row-between">
             <CardTitle>{t("navigation.serviceStatus")}</CardTitle>
             <UnderlineHover asChild>
-              <Link to="/status" className="small muted">
+              <Link to="/ai/status" className="small muted">
                 {t("home.allServicesLabel")}
               </Link>
             </UnderlineHover>
@@ -164,8 +164,16 @@ export function PlatformSummary() {
               .map((service, index) => ({ service, query: statuses[index] }))
               .sort(
                 (a, b) =>
-                  statusOrder(a.query.data?.status?.indicator) -
-                  statusOrder(b.query.data?.status?.indicator),
+                  statusOrder(
+                    a.query.isError
+                      ? undefined
+                      : a.query.data?.status?.indicator,
+                  ) -
+                  statusOrder(
+                    b.query.isError
+                      ? undefined
+                      : b.query.data?.status?.indicator,
+                  ),
               )
               .map(({ service, query }) => {
                 const indicator = query.data?.status?.indicator;
@@ -176,7 +184,7 @@ export function PlatformSummary() {
                   >
                     <UnderlineHover asChild>
                       <Link
-                        to={`/status?service=${service.id}`}
+                        to={`/ai/status?service=${service.id}`}
                         className="flex min-w-0 items-center gap-2 text-foreground"
                         style={{ display: "flex" }}
                       >
@@ -187,20 +195,61 @@ export function PlatformSummary() {
                       </Link>
                     </UnderlineHover>
                     <span
-                      className="home-metric shrink-0"
-                      style={{
-                        color: !indicator
-                          ? "var(--muted-foreground)"
-                          : indicator === "none"
-                            ? "var(--success)"
-                            : "var(--danger)",
-                      }}
+                      className="flex shrink-0 flex-col items-end gap-0.5 text-right"
+                      title={query.error?.message}
                     >
-                      {query.isPending ? (
-                        <Pending>{t("common.lookingUpLabel")}</Pending>
-                      ) : (
-                        (statusLabels[indicator ?? ""] ??
-                        t("common.pendingConfirmation"))
+                      <span
+                        className="home-metric"
+                        style={{
+                          color: query.isError
+                            ? "var(--warning)"
+                            : !indicator
+                              ? "var(--muted-foreground)"
+                              : indicator === "none"
+                                ? "var(--success)"
+                                : "var(--danger)",
+                        }}
+                      >
+                        {query.isPending ? (
+                          <Pending>{t("common.lookingUpLabel")}</Pending>
+                        ) : query.isError ? (
+                          t(
+                            query.data
+                              ? "status.updateFailed"
+                              : "status.lookupFailed",
+                          )
+                        ) : (
+                          (statusLabels[indicator ?? ""] ??
+                          t("common.pendingConfirmation"))
+                        )}
+                      </span>
+                      {query.isError && query.data && (
+                        <>
+                          <span className="text-[10px] text-muted-foreground">
+                            {t("status.lastKnownStatus", [
+                              statusLabels[indicator ?? ""] ??
+                                t("common.pendingConfirmation"),
+                            ])}
+                          </span>
+                          <time
+                            dateTime={query.data.fetchedAt}
+                            className="text-[10px] text-muted-foreground"
+                            title={t("status.lastSuccessfulUpdate", [
+                              new Date(query.data.fetchedAt).toLocaleString(
+                                locale,
+                              ),
+                            ])}
+                            aria-label={t("status.lastSuccessfulUpdate", [
+                              new Date(query.data.fetchedAt).toLocaleString(
+                                locale,
+                              ),
+                            ])}
+                          >
+                            {new Date(query.data.fetchedAt).toLocaleTimeString(
+                              locale,
+                            )}
+                          </time>
+                        </>
                       )}
                     </span>
                   </div>

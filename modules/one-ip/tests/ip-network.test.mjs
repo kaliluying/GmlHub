@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { ipNetwork } from "../public/worker/ip-network.js";
-import { registrationServer } from "../public/worker/whois.js";
+import { ipNetwork } from "../worker/ip-network.js";
+import { registrationServer } from "../worker/whois.js";
 
 test("network details validate all announcing ASNs and preserve no-ROA vs unavailable", async () => {
   const original = globalThis.fetch;

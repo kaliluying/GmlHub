@@ -1,6 +1,5 @@
 {
   "navigation.documentation": "使用文档",
-  "navigation.ipbotCommercialSite": "IPBot 商业网站",
   "navigation.fullGuide": "完整使用文档",
   "common.copied": "已复制",
   "common.copy": "复制",
@@ -282,5 +281,6 @@
   "share.scanCopyLinkOpenPage": "扫码或复制链接，打开当前页面。",
   "share.scanToOpenThisPage": "扫码打开当前页面",
   "share.currentPageLink": "当前页面链接",
-  "navigation.pageTransition": "页面切换"
+  "navigation.pageTransition": "页面切换",
+  "navigation.lookup": "查询"
 }

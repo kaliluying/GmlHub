@@ -143,8 +143,8 @@ export function QuickChecks() {
                 onClick={() =>
                   navigate(
                     target.trim()
-                      ? `/network/ip/${encodeURIComponent(target.trim())}`
-                      : "/network/ip",
+                      ? `/lookup/ip/${encodeURIComponent(target.trim())}`
+                      : "/lookup/ip",
                   )
                 }
               >
@@ -154,8 +154,8 @@ export function QuickChecks() {
                 <Link
                   to={
                     target.trim()
-                      ? `/network/whois?q=${encodeURIComponent(target.trim())}`
-                      : "/network/whois"
+                      ? `/lookup/whois?q=${encodeURIComponent(target.trim())}`
+                      : "/lookup/whois"
                   }
                 >
                   {t("common.whoisLookup")}

@@ -27,8 +27,7 @@ export function categoryStatusClass(
   const unreachable = rows.filter((row) => row.reachable === false).length;
   const success = rows.filter((row) => row.geo?.ip).length;
   if (!unreachable && success === rows.length)
-    return "text-emerald-700 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-400";
-  if (unreachable < rows.length)
-    return "text-amber-700 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-400";
+    return "text-success hover:text-success";
+  if (unreachable < rows.length) return "text-warning hover:text-warning";
   return "text-destructive hover:text-destructive";
 }

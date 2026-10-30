@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { SiteLogo } from "@/components/site-logo";
+import { Pending } from "@/components/toolkit";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 import { attachMapLayers, loadMapConfig } from "@/lib/map";
+import { maskedIp } from "@/lib/network";
 import type { Geo } from "@/lib/types";
+import { hideIpAtom } from "@/store/privacy";
 import { gsap } from "gsap";
+import { useAtomValue } from "jotai";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { categoryStatusClass } from "./category-status";
@@ -31,6 +35,7 @@ export default function ExitMap({
   onSelect: (name: string) => void;
   mapOnly?: boolean;
 }) {
+  const hidden = useAtomValue(hideIpAtom);
   const [category, setCategory] = useState("all");
   const shownRows = rows.filter(
     (row) => category === "all" || row.extra?.includes(category),
@@ -39,15 +44,17 @@ export default function ExitMap({
   const map = useRef<L.Map | null>(null);
   const markers = useRef(new Map<string, L.Marker>());
   const fitted = useRef(false);
-  const scope = rows
+  const scope = shownRows
     .map((row) => row.name)
     .sort()
     .join("|");
   const finished =
-    rows.length > 0 &&
-    rows.every((row) => row.visible && !row.pending && !row.geoPending);
+    shownRows.length > 0 &&
+    shownRows.every((row) => row.visible && !row.pending && !row.geoPending);
   const bounds = useRef<L.LatLngBounds | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const [tileError, setTileError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     const element = container.current;
     if (!element) return;
@@ -59,6 +66,8 @@ export default function ExitMap({
       minZoom: 1,
     }).setView([25, 20], 2);
     map.current = instance;
+    instance.attributionControl.setPrefix(false);
+    setLoaded(false);
     setTileError(false);
     void loadMapConfig().then((config) => {
       if (disposed) return;
@@ -66,7 +75,10 @@ export default function ExitMap({
         L.tileLayer,
         instance,
         config,
-        () => {},
+        () => {
+          setLoaded(true);
+          setTileError(false);
+        },
         () => setTileError(true),
       );
     });
@@ -81,12 +93,12 @@ export default function ExitMap({
       instance.remove();
       map.current = null;
     };
-  }, []);
+  }, [attempt]);
   const groups = new Map<
     string,
     { position: L.LatLngTuple; sites: typeof rows }
   >();
-  for (const row of rows) {
+  for (const row of shownRows) {
     const lat = row.geo?.latitude;
     const lon = row.geo?.longitude;
     if (
@@ -125,7 +137,8 @@ export default function ExitMap({
         button.type = "button";
         button.style.cssText =
           "display:block;text-align:left;padding:6px 0;width:100%";
-        button.textContent = `${site.domain ?? site.name} · ${site.geo?.ip} · ${t("home.egressCollected")}`;
+        const ip = site.geo?.ip;
+        button.textContent = `${site.domain ?? site.name} · ${ip ? maskedIp(ip, hidden) : t("common.unknown")} · ${t("home.egressCollected")}`;
         button.onclick = () => onSelect(site.name);
         content.append(button);
       }
@@ -203,7 +216,7 @@ export default function ExitMap({
       animate: !window.matchMedia("(prefers-reduced-motion: reduce)").matches,
       duration: 0.5,
     });
-  }, [finished, scope]);
+  }, [finished, scope, attempt]);
   return (
     <section className="mb-2 space-y-1.5">
       <div className="flex items-center justify-between gap-2">
@@ -218,8 +231,10 @@ export default function ExitMap({
               map.current?.fitBounds(bounds.current, {
                 padding: [40, 40],
                 maxZoom: 5,
+                animate: !window.matchMedia("(prefers-reduced-motion: reduce)")
+                  .matches,
               });
-            else map.current?.setView([25, 20], 2);
+            else map.current?.setView([25, 20], 2, { animate: false });
           }}
         >
           {t("home.showAllExits")}
@@ -228,11 +243,24 @@ export default function ExitMap({
       <div
         className={`grid overflow-hidden rounded-lg border ${mapOnly ? "" : "lg:grid-cols-[minmax(0,1fr)_280px]"}`}
       >
-        <div
-          ref={container}
-          className="exit-map relative z-0 h-[280px] min-w-0 sm:h-[360px]"
-          aria-label={t("home.egressMap")}
-        />
+        <div className="relative min-w-0">
+          <div
+            ref={container}
+            className="exit-map relative z-0 h-[280px] min-w-0 sm:h-[360px]"
+            aria-label={t("home.egressMap")}
+            aria-busy={!loaded && !tileError}
+          />
+          {!loaded && !tileError && (
+            <div
+              className="pointer-events-none absolute inset-0 grid place-items-center"
+              role="status"
+            >
+              <span className="rounded-md bg-background/90 px-3 py-2 text-xs shadow-sm">
+                <Pending>{t("home.loadingMap")}</Pending>
+              </span>
+            </div>
+          )}
+        </div>
         {!mapOnly && (
           <div className="flex min-h-0 flex-col border-t bg-background lg:border-t-0 lg:border-l">
             <div
@@ -293,12 +321,12 @@ export default function ExitMap({
                 const color = !row.visible
                   ? "bg-muted text-muted-foreground"
                   : row.pending || row.geoPending
-                    ? "bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                    ? "bg-warning/10 text-warning"
                     : row.reachable === false
                       ? "bg-destructive/10 text-destructive"
                       : row.geo
-                        ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                        : "bg-amber-500/10 text-amber-700 dark:text-amber-300";
+                        ? "bg-success/10 text-success"
+                        : "bg-warning/10 text-warning";
                 const hostname =
                   row.domain ?? row.icon.match(/\/ip3\/([^/?#]+)\.ico/)?.[1];
                 const website = row.domain
@@ -334,8 +362,15 @@ export default function ExitMap({
         )}
       </div>
       {tileError && (
-        <p className="text-xs text-muted-foreground">
-          {t("home.mapTilesCouldLoadCheckConnectionRefreshExit")}
+        <p className="text-xs text-muted-foreground" role="status">
+          {t("home.mapTilesCouldLoadCheckConnectionRefreshExit")}{" "}
+          <button
+            type="button"
+            className="text-primary underline underline-offset-4"
+            onClick={() => setAttempt((value) => value + 1)}
+          >
+            {t("common.retry")}
+          </button>
         </p>
       )}
     </section>

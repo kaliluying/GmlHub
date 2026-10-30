@@ -1,5 +1,5 @@
 import { geoIp } from "./geo.js";
-import { HttpError, json, publicIp, upstream } from "./http.js";
+import { clientIp, HttpError, json, publicIp, upstream } from "./http.js";
 
 export async function ipHealth(request, env) {
   const url = new URL(request.url);
@@ -7,15 +7,13 @@ export async function ipHealth(request, env) {
   if (!["json", "text"].includes(format))
     throw new HttpError(400, "format 仅支持 json 或 text");
   const target = url.searchParams.get("ip");
-  if (
-    target === null &&
-    (env.LOCAL_DEV === "true" || !request.headers.get("CF-Connecting-IP"))
-  )
+  const visitorIp = clientIp(request);
+  if (target === null && (env.LOCAL_DEV === "true" || !visitorIp))
     throw new HttpError(
       503,
-      "无法获取真实访客 IP，请指定 ip 参数或部署 Worker 后检测",
+      "无法获取真实访客 IP，请指定 ip 参数或检查部署的访客 IP 配置",
     );
-  const ip = publicIp(target ?? request.headers.get("CF-Connecting-IP"));
+  const ip = publicIp(target ?? visitorIp);
   let data;
   let source = "Net.Coffee";
   try {

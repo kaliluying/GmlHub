@@ -1,7 +1,14 @@
 import { t } from "@/i18n";
 import { localizeApiMessage } from "@/i18n/api-message";
 
-export type ResponseMode = "json" | "text" | "opaque" | "headers" | "response";
+export type ResponseMode =
+  | "json"
+  | "text"
+  | "opaque"
+  | "headers"
+  | "response"
+  // Unchecked Response, including opaque and non-2xx, for probes that classify status themselves.
+  | "raw";
 export class HttpRequestError extends Error {
   status: number;
   constructor(status: number, message: string) {
@@ -35,6 +42,7 @@ export async function request<T>(
           referrerPolicy: "no-referrer",
         });
         if (mode === "opaque") return undefined as T;
+        if (mode === "raw") return response as T;
         if (!response.ok) {
           let message = t("api.requestFailed", [response.status]);
           try {

@@ -24,7 +24,7 @@ export function AiPlatformLinks({ platform }: { platform: AiPlatform }) {
         </Button>
       ))}
       <Button variant="outline" size="sm" asChild>
-        <Link to={`/status?service=${platform.statusId}`}>
+        <Link to={`/ai/status?service=${platform.statusId}`}>
           {t("navigation.serviceStatus")}
         </Link>
       </Button>
@@ -32,7 +32,7 @@ export function AiPlatformLinks({ platform }: { platform: AiPlatform }) {
         <Link to="/browser/privacy">{t("common.permissionsPrivacy")}</Link>
       </Button>
       <Button variant="outline" size="sm" asChild>
-        <Link to="/network/ip">{t("ai.lookUpPublicIp")}</Link>
+        <Link to="/lookup/ip">{t("ai.lookUpPublicIp")}</Link>
       </Button>
       {["gpt", "claude"].includes(platform.id) && (
         <Button variant="outline" size="sm" asChild>

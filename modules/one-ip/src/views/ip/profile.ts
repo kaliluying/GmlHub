@@ -60,7 +60,7 @@ export function ipProfile(data: CoffeeIp) {
     score >= 90 &&
     data.isResidential === true &&
     data.is_datacenter === false &&
-    !data.is_mobile &&
+    data.is_mobile === false &&
     !data.is_public_service &&
     companyType === "isp" &&
     sameCountry === true &&
@@ -175,7 +175,9 @@ export function ipProfile(data: CoffeeIp) {
         data.isResidential === false ||
         data.is_datacenter === true
           ? false
-          : data.isResidential === true && data.is_datacenter === false
+          : data.isResidential === true &&
+              data.is_datacenter === false &&
+              data.is_mobile === false
             ? true
             : null,
     },

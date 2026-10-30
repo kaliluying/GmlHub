@@ -45,10 +45,7 @@ export default function PlatformDiagnostics({
   });
   return (
     <div className="ai-diagnostics">
-      <PageHeading
-        title={t("ai.networkCheck", [platform.name])}
-        description=""
-      />
+      <PageHeading title={t("ai.networkCheck", [platform.name])} />
       <div className="ai-overview">
         <ToolCard
           title={

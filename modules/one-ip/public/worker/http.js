@@ -16,6 +16,9 @@ export function json(data, status = 200) {
     },
   });
 }
+export function clientIp(request) {
+  return request.clientIp ?? request.headers.get("CF-Connecting-IP");
+}
 export function publicIp(value) {
   if (!isIP(value) || value.includes("%"))
     throw new HttpError(400, "请输入有效的公网 IPv4 或 IPv6 地址");

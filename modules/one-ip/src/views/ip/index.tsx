@@ -93,7 +93,7 @@ export default function IpPage() {
           onSubmit={(value) =>
             value === ip
               ? void query.refetch()
-              : navigate(`/network/ip/${encodeURIComponent(value)}`)
+              : navigate(`/lookup/ip/${encodeURIComponent(value)}`)
           }
         />
       </div>
@@ -119,7 +119,7 @@ export default function IpPage() {
               onClick={() =>
                 value === ip
                   ? void query.refetch()
-                  : navigate(`/network/ip/${encodeURIComponent(value)}`)
+                  : navigate(`/lookup/ip/${encodeURIComponent(value)}`)
               }
             >
               <IpText ip={value} link={false} />

@@ -1,5 +1,4 @@
 {
-  "whois.lookUpDomainIpOrAsnRegistration": "Look up domain, IP or ASN registration",
   "whois.enterADomainIpAddressOrAsNumber": "Enter a domain, IP address or AS number",
   "whois.queryingTheRegistry": "Querying the registry…",
   "whois.basicInformation": "Basic information",

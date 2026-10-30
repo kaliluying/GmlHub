@@ -20,7 +20,6 @@ export function PageHeading({
   privacy = false,
 }: {
   title: string;
-  description: string;
   privacy?: boolean;
 }) {
   useEffect(() => {
@@ -78,7 +77,7 @@ export function IpText({ ip, link = true }: { ip?: string; link?: boolean }) {
       <AnimatedValue value={ip}>
         {link && !hidden ? (
           <UnderlineHover asChild>
-            <Link to={`/network/ip/${encodeURIComponent(ip)}`}>{content}</Link>
+            <Link to={`/lookup/ip/${encodeURIComponent(ip)}`}>{content}</Link>
           </UnderlineHover>
         ) : (
           content

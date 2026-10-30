@@ -1,4 +1,4 @@
-import { parseTrace } from "@/lib/network";
+import { parseTrace, request } from "@/lib/network";
 import {
   AIM_VERSION,
   ACCESS_VERSION,
@@ -33,13 +33,16 @@ async function egress(
   signal: AbortSignal,
 ): Promise<string | undefined> {
   try {
-    const response = await fetch(`${origin}/cdn-cgi/trace`, {
-      mode: "cors",
-      credentials: "omit",
-      cache: "no-store",
-      referrerPolicy: "no-referrer",
-      signal: AbortSignal.any([signal, AbortSignal.timeout(3000)]),
-    });
+    const response = await request<Response>(
+      `${origin}/cdn-cgi/trace`,
+      {
+        mode: "cors",
+        credentials: "omit",
+        cache: "no-store",
+        signal: AbortSignal.any([signal, AbortSignal.timeout(3000)]),
+      },
+      "raw",
+    );
     if (!response.ok || new URL(response.url).origin !== origin) return;
     return parseTrace(await response.text()).ip;
   } catch {
@@ -91,13 +94,16 @@ export async function measurePlatforms(
         ]);
         let sample: HttpSample;
         try {
-          const response = await fetch(job.target.url, {
-            mode: job.mode,
-            credentials: "omit",
-            cache: "no-store",
-            referrerPolicy: "no-referrer",
-            signal: requestSignal,
-          });
+          const response = await request<Response>(
+            job.target.url,
+            {
+              mode: job.mode,
+              credentials: "omit",
+              cache: "no-store",
+              signal: requestSignal,
+            },
+            "raw",
+          );
           const elapsedMs = Math.round(performance.now() - start);
           sample = {
             elapsedMs,

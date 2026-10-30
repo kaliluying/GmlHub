@@ -40,7 +40,7 @@
   "api.requestMethodNotSupported": "Request method not supported",
   "api.tooManyRequestsPleaseRetryInOneMinute": "Too many requests. Please retry in one minute",
   "api.apiEndpointNotFound": "API endpoint not found",
-  "api.realVisitorIpAvailableLocallyDeployWorkerCheck": "No real visitor IP is available locally. Deploy the Worker to check; no example IP will be substituted.",
+  "api.realVisitorIpAvailableLocallyDeployWorkerCheck": "No real public visitor IP is available. Check the visitor IP configuration for this deployment; no example IP will be substituted.",
   "api.unknownService": "Unknown service",
   "api.publicStatusApiIntegratedServiceCheckOfficialStatus": "No public status API is integrated for this service. Check its official status page",
   "api.invalidUrlEncoding": "Invalid URL encoding",

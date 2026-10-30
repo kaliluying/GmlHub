@@ -62,10 +62,7 @@ export default function SubdomainsPage() {
   return (
     <div className="lookup-page text-[13px] leading-relaxed">
       <div className="lookup-search-card">
-        <PageHeading
-          title={t("common.subdomainLookup")}
-          description={t("subdomains.description")}
-        />
+        <PageHeading title={t("common.subdomainLookup")} />
         <LookupForm
           grouped
           value={q}

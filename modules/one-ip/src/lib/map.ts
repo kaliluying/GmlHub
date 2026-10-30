@@ -31,32 +31,48 @@ export function normalizeMapConfig(value: unknown): MapConfig {
 }
 
 export function loadMapConfig() {
-  return (mapConfigPromise ??= endpoint<unknown>("/map/config")
+  return (mapConfigPromise ??= endpoint<unknown>("/map/config", {
+    signal: AbortSignal.timeout(3000),
+  })
     .then(normalizeMapConfig)
-    .catch(() => ({ provider: "osm" as const })));
+    .catch(() => {
+      mapConfigPromise = undefined;
+      return { provider: "osm" as const };
+    }));
 }
 
 export function mapTileLayers(config: MapConfig): MapTileLayerSpec[] {
+  const options: TileLayerOptions = {
+    maxZoom: 19,
+    updateWhenIdle: true,
+    updateWhenZooming: false,
+    keepBuffer: 1,
+    // Tile providers need the site origin, never the queried IP in the page URL.
+    referrerPolicy: "strict-origin",
+  };
   if (config.provider === "tianditu" && config.token) {
     const token = encodeURIComponent(config.token);
-    const options: TileLayerOptions = {
-      maxZoom: 19,
-      subdomains: TIANDITU_SUBDOMAINS,
-    };
     const url = (type: "vec_w" | "cva_w") =>
       `https://{s}.tianditu.gov.cn/DataServer?T=${type}&x={x}&y={y}&l={z}&tk=${token}`;
     return [
       {
         url: url("vec_w"),
-        options: { ...options, attribution: TIANDITU_ATTRIBUTION },
+        options: {
+          ...options,
+          subdomains: TIANDITU_SUBDOMAINS,
+          attribution: TIANDITU_ATTRIBUTION,
+        },
       },
-      { url: url("cva_w"), options: { ...options } },
+      {
+        url: url("cva_w"),
+        options: { ...options, subdomains: TIANDITU_SUBDOMAINS },
+      },
     ];
   }
   return [
     {
       url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-      options: { maxZoom: 19, attribution: OSM_ATTRIBUTION },
+      options: { ...options, attribution: OSM_ATTRIBUTION },
     },
   ];
 }
@@ -77,8 +93,10 @@ export function attachMapLayers(
   let disposed = false;
   let generation = 0;
   let current: MapLayerSet | undefined;
+  let timeout: ReturnType<typeof setTimeout> | undefined;
 
   const removeCurrent = () => {
+    clearTimeout(timeout);
     const layers = current?.layers ?? [];
     current = undefined;
     for (const layer of layers) {
@@ -93,20 +111,40 @@ export function attachMapLayers(
     const layers = mapTileLayers(nextConfig).map(({ url, options }) =>
       tileLayer(url, options),
     );
+    const loadedLayers = new Set<TileLayer>();
+    let reportedError = false;
+    const fail = () => {
+      if (disposed || currentGeneration !== generation) return;
+      if (nextConfig.provider === "tianditu") {
+        removeCurrent();
+        activate({ provider: "osm" });
+      } else if (loadedLayers.size < layers.length && !reportedError) {
+        clearTimeout(timeout);
+        reportedError = true;
+        onTileError();
+      }
+    };
     current = { layers };
+    timeout = setTimeout(fail, 10_000);
     for (const layer of layers) {
-      layer.on("tileload", () => {
-        if (!disposed && currentGeneration === generation) onTileLoad();
-      });
-      layer.on("tileerror", () => {
+      layer.on("loading", () => {
         if (disposed || currentGeneration !== generation) return;
-        if (nextConfig.provider === "tianditu") {
-          removeCurrent();
-          activate({ provider: "osm" });
-        } else {
-          onTileError();
+        loadedLayers.delete(layer);
+        reportedError = false;
+        clearTimeout(timeout);
+        timeout = setTimeout(fail, 10_000);
+      });
+      layer.on("tileload", () => {
+        if (disposed || currentGeneration !== generation) return;
+        loadedLayers.add(layer);
+        // Tianditu needs both the basemap and its place-name annotation layer.
+        if (loadedLayers.size === layers.length) {
+          clearTimeout(timeout);
+          onTileLoad();
         }
       });
+      layer.on("tileerror", fail);
+      if (disposed || currentGeneration !== generation) break;
       layer.addTo(map);
     }
   };

@@ -9,9 +9,9 @@ import {
   parseAws,
   parseBandwagon,
   getCloudStatus,
-} from "../public/worker/cloud-status.js";
+} from "../worker/cloud-status.js";
 
-const services = JSON.parse(readFileSync("public/worker/services.json"));
+const services = JSON.parse(readFileSync("worker/services.json"));
 test("VPS and major cloud catalogs match and use official destinations", () => {
   assert.deepEqual(
     services,

@@ -27,12 +27,7 @@ export function ServiceStatusPage({
   });
   return (
     <>
-      <PageHeading
-        title={t("status.liveServiceStatus", [name])}
-        description={t(
-          "status.currentHealthComponentsIncidentsOfficialStatusApis",
-        )}
-      />
+      <PageHeading title={t("status.liveServiceStatus", [name])} />
       <ErrorNotice error={query.error} />
       {query.isPending ? (
         <Pending>{t("status.loadingOfficialStatus")}</Pending>

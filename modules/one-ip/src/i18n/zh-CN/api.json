@@ -40,7 +40,7 @@
   "api.requestMethodNotSupported": "不支持此请求方法",
   "api.tooManyRequestsPleaseRetryInOneMinute": "请求过于频繁，请一分钟后重试",
   "api.apiEndpointNotFound": "接口不存在",
-  "api.realVisitorIpAvailableLocallyDeployWorkerCheck": "本地环境没有真实访客 IP，请部署 Worker 后检测；不会使用示例 IP。",
+  "api.realVisitorIpAvailableLocallyDeployWorkerCheck": "当前环境没有真实访客公网 IP，请检查部署的访客 IP 配置；不会使用示例 IP。",
   "api.unknownService": "未知服务",
   "api.publicStatusApiIntegratedServiceCheckOfficialStatus": "该服务未提供已接入的公开状态接口，请查看官方状态页",
   "api.invalidUrlEncoding": "URL 编码无效",

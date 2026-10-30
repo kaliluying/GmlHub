@@ -1,4 +1,4 @@
-import { publicIp, upstream } from "./http.js";
+import { clientIp, publicIp, upstream } from "./http.js";
 
 function matchesIp(value, ip) {
   try {
@@ -11,7 +11,7 @@ function matchesIp(value, ip) {
 export function cfGeo(request) {
   const cf = request.cf ?? {};
   return {
-    ip: request.headers.get("CF-Connecting-IP") ?? "",
+    ip: clientIp(request) ?? "",
     country: cf.country,
     country_code: cf.country,
     region: cf.region,
@@ -21,7 +21,7 @@ export function cfGeo(request) {
     latitude: cf.latitude ? Number(cf.latitude) : undefined,
     longitude: cf.longitude ? Number(cf.longitude) : undefined,
     timezone: cf.timezone,
-    source: "Cloudflare request.cf",
+    source: request.clientIpSource ?? "Cloudflare request.cf",
   };
 }
 export async function geoIp(ip) {
