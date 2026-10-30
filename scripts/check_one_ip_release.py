@@ -1,4 +1,5 @@
-"""Check the actual Worker revision, bundled pages, and a public-IP API query."""
+"""Check Worker revision and exact assets; optionally diagnose upstream data."""
+import argparse
 import hashlib
 import json
 import re
@@ -33,9 +34,6 @@ def check(commit, directory, origin='https://gmlhub.top'):
     if not isinstance(config, list) or not config or not all(
             isinstance(item, dict) and isinstance(item.get('configured'), bool) for item in config):
         raise ValueError('Worker configuration API is unavailable')
-    health = json.loads(get(origin + '/one-ip/api/ip/health?ip=1.1.1.1&release=' + commit))
-    if not isinstance(health, dict) or health.get('ip') != '1.1.1.1':
-        raise ValueError('Worker public-IP lookup is unavailable')
     html = (directory / 'one-ip/index.html').read_bytes()
     script = re.search(rb'<script[^>]+src="(/one-ip/assets/[^"]+\.js)"', html)
     if not script:
@@ -48,11 +46,27 @@ def check(commit, directory, origin='https://gmlhub.top'):
             raise ValueError('Worker asset mismatch: ' + path)
 
 
+def check_upstream(commit, origin='https://gmlhub.top'):
+    health = json.loads(get(origin + '/one-ip/api/ip/health?ip=1.1.1.1&release=' + commit))
+    if not isinstance(health, dict) or health.get('ip') != '1.1.1.1':
+        raise ValueError('Worker public-IP lookup is unavailable')
+    if health.get('source') != 'Net.Coffee' or health.get('status') == 'unknown':
+        raise ValueError('IP reputation source unavailable; lookup is degraded')
+
+
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('commit')
+    parser.add_argument('directory')
+    parser.add_argument('--origin', default='https://gmlhub.top')
+    parser.add_argument('--upstream', action='store_true')
+    arguments = parser.parse_args()
     for attempt in range(3):
         try:
-            check(*sys.argv[1:])
-            print('one-ip Worker and public assets verified: ' + sys.argv[1])
+            check(arguments.commit, arguments.directory, arguments.origin)
+            if arguments.upstream:
+                check_upstream(arguments.commit, arguments.origin)
+            print('one-ip Worker and public assets verified: ' + arguments.commit)
             break
         except (ValueError, OSError) as error:
             if attempt == 2:

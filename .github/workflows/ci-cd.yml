@@ -133,8 +133,7 @@ jobs:
           WRANGLER_SEND_METRICS: 'false'
         run: |
           python3 scripts/prepare_worker_assets.py release.tar.gz "$GITHUB_SHA" dist
-          pnpm --dir modules/one-ip exec wrangler deploy ../../.worker-check/one-ip-worker.js --config ../../wrangler.toml --no-bundle --keep-vars --tag "$GITHUB_SHA" --var "RELEASE_SHA:$GITHUB_SHA"
-          python3 scripts/check_one_ip_release.py "$GITHUB_SHA" dist
+          python3 scripts/deploy_worker_release.py "$GITHUB_SHA" dist
       - name: Restore the tagged one-ip Worker before rolling back the desktop
         if: steps.latest.outputs.publish == 'true' && inputs.operation == 'rollback'
         env:
@@ -162,3 +161,11 @@ jobs:
       - name: Confirm Worker and desktop still refer to the same release
         if: steps.latest.outputs.publish == 'true' && inputs.operation != 'rollback'
         run: python3 scripts/check_one_ip_release.py "$GITHUB_SHA" dist
+      - name: Diagnose third-party IP reputation after publishing
+        if: steps.latest.outputs.publish == 'true' && inputs.operation != 'rollback'
+        continue-on-error: true
+        run: |
+          if ! python3 scripts/check_one_ip_release.py "$GITHUB_SHA" dist --upstream; then
+            echo '::warning::Third-party IP reputation diagnostic failed; the desktop and Worker release checks passed.'
+            exit 1
+          fi

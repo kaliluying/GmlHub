@@ -1,3 +1,4 @@
+import { geoIp } from "./geo.js";
 import { HttpError, json, publicIp, upstream } from "./http.js";
 
 export async function ipHealth(request, env) {
@@ -15,10 +16,26 @@ export async function ipHealth(request, env) {
       "无法获取真实访客 IP，请指定 ip 参数或部署 Worker 后检测",
     );
   const ip = publicIp(target ?? request.headers.get("CF-Connecting-IP"));
-  const data = await upstream(
-    `https://ip.net.coffee/api/ip/lookup/${encodeURIComponent(ip)}`,
-    { redirect: "manual" },
-  );
+  let data;
+  let source = "Net.Coffee";
+  try {
+    data = await upstream(
+      `https://ip.net.coffee/api/ip/lookup/${encodeURIComponent(ip)}`,
+      { redirect: "manual" },
+    );
+  } catch (error) {
+    if (error instanceof HttpError && error.status !== 502) throw error;
+    const failure =
+      error instanceof HttpError
+        ? error
+        : new HttpError(502, "外部数据源连接失败或超时");
+    try {
+      data = await geoIp(ip);
+      source = data.source;
+    } catch {
+      throw failure;
+    }
+  }
   let returnedIp;
   try {
     returnedIp = publicIp(data?.ip);
@@ -38,6 +55,7 @@ export async function ipHealth(request, env) {
   const result = {
     ip,
     checked_at: new Date().toISOString(),
+    source,
     score,
     status:
       score === null

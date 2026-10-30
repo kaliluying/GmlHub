@@ -53,7 +53,7 @@ pnpm run worker:check
 
 生产采用宝塔 + Cloudflare Workers：桌面仍由宝塔托管，`wrangler.toml` 仅让 `gmlhub.top/one-ip` 和 `gmlhub.top/one-ip/*` 交给 `gmlhub-one-ip` Worker，后者提供模块静态资源、子页面回退和 API。域名必须保持 Cloudflare 代理开启。直接访问模块请使用带斜杠的 `/one-ip/`；Cloudflare 精确路径路由不会匹配无尾斜杠且带查询参数的 `/one-ip?…`。不把 VPS 出口或浏览器自报 Header 当作真实访客 IP/TLS 指纹。
 
-CI 在不持有生产凭据的 verify job 中构建并测试两套前端和 Worker；deploy job 下载同一次运行的已验证产物，先部署 Worker 并核对提交号、真实公开 IP 查询、首页、深层页面与入口脚本，再发布宝塔桌面。`pnpm run worker:check` 只做本地打包，**不会发布**。生产 Secrets、重试和跨平台回滚边界见 [部署说明](../deploy/README.md)。凭据未配置或发布检查失败时，不会继续发布桌面；本地通过不等于生产已上线。
+CI 在不持有生产凭据的 verify job 中构建并测试两套前端和 Worker；deploy job 下载同一次运行的已验证产物，先部署 Worker 并核对提交号、配置 API、首页、深层页面与入口脚本，再发布宝塔桌面。第三方 IP 声誉查询独立诊断，失败会告警，不阻止桌面发布。Worker 部署或紧随其后的必过检查失败时，尝试恢复到部署前桌面 SHA 对应的 Worker 版本并验证，CI 仍失败。`pnpm run worker:check` 只做本地打包，**不会发布**。生产 Secrets、重试和跨平台回滚边界见 [部署说明](../deploy/README.md)。凭据未配置或发布必过检查失败时，不会继续发布桌面；本地通过不等于生产已上线。
 
 网络模块静态响应追加 `Cache-Control: no-transform` 并保留原缓存规则，避免 Cloudflare 自动注入统计脚本改变页面字节及指纹环境；不修改域名的全局统计或安全设置。[Cloudflare 说明](https://developers.cloudflare.com/web-analytics/faq/)
 

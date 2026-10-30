@@ -60,7 +60,7 @@
   "apiUsage.tsx.addIp1111QueryPublic": "Add ?ip=1.1.1.1 to query a public IPv4 / IPv6 address, or ?format=text for terminal text output.",
   "apiUsage.tsx.exampleResponse": "Example response",
   "apiUsage.tsx.illustrativeDataNotALiveQueryResult": "Illustrative data, not a live query result.",
-  "apiUsage.tsx.higherReputationScoresBetterUnknownFieldsNullApi": "Higher reputation scores are better. Unknown fields are null. The API is rate-limited; retry later after a 429 response.",
+  "apiUsage.tsx.higherReputationScoresBetterUnknownFieldsNullApi": "Higher reputation scores are better. Unknown fields are null. If the primary source is unavailable, only ipwho.is location data is returned: source identifies the provider, score and risk flags are null, and status is unknown. This does not mean the IP is safe. The API is rate-limited; retry later after a 429 response.",
   "api.thirdPartyStatusDataIsUnavailable": "Third-party status data is unavailable",
   "api.thirdPartyWebsiteMonitorOperational": "Third-party website monitor: operational",
   "api.thirdPartyWebsiteMonitorOutage": "Third-party website monitor: outage",

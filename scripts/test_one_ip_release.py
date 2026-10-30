@@ -89,7 +89,7 @@ class OneIpReleaseTests(unittest.TestCase):
         responses = {
             '/one-ip/api/deployment': json.dumps({'commit': self.commit}).encode(),
             '/one-ip/api/browser/challenges': b'[{"configured":false}]',
-            '/one-ip/api/ip/health': b'{"ip":"1.1.1.1"}',
+            '/one-ip/api/ip/health': (502, b'{"error":"upstream unavailable (403)"}'),
             '/one-ip/': (self.source / 'one-ip/index.html').read_bytes(),
             '/one-ip/network/ip/1.1.1.1': (self.source / 'one-ip/index.html').read_bytes(),
             '/one-ip/assets/app.js': b'module',
@@ -117,14 +117,24 @@ class OneIpReleaseTests(unittest.TestCase):
         self.addCleanup(server.shutdown)
         origin = 'http://127.0.0.1:' + str(server.server_port)
         check_one_ip_release.check(self.commit, self.source, origin)
+        self.assertFalse(any(path == '/one-ip/api/ip/health' for path, _ in seen))
+        with self.assertRaisesRegex(ValueError, 'public request failed'):
+            check_one_ip_release.check_upstream(self.commit, origin)
+        responses['/one-ip/api/ip/health'] = b'{"ip":"1.1.1.1","source":"Net.Coffee","status":"good","score":85}'
+        check_one_ip_release.check_upstream(self.commit, origin)
+        for body in [
+            b'{"ip":"8.8.8.8"}', b'null',
+            b'{"ip":"1.1.1.1","source":"ipwho.is","status":"unknown","score":null}',
+        ]:
+            responses['/one-ip/api/ip/health'] = body
+            with self.assertRaises(ValueError):
+                check_one_ip_release.check_upstream(self.commit, origin)
         self.assertIn(('/one-ip/network/ip/1.1.1.1', 'text/html'), seen)
         cases = [
             ('/one-ip/api/deployment', b'{"commit":"wrong"}'),
             ('/one-ip/api/deployment', b'[]'),
             ('/one-ip/api/browser/challenges', b'[null]'),
             ('/one-ip/api/browser/challenges', b'[]'),
-            ('/one-ip/api/ip/health', b'{"ip":"8.8.8.8"}'),
-            ('/one-ip/api/ip/health', b'null'),
             ('/one-ip/', b'desktop'),
             ('/one-ip/network/ip/1.1.1.1', (302, b'')),
             ('/one-ip/assets/app.js', (404, b'not found')),

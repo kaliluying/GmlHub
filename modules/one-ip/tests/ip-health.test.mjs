@@ -19,9 +19,80 @@ test("health API uses the caller IP, preserves false flags and returns uncached 
   const data = await response.json();
   assert.equal(data.score, 75);
   assert.equal(data.status, "good");
-  assert.equal(data.source, undefined);
+  assert.equal(data.source, "Net.Coffee");
   assert.equal(data.flags.vpn, false);
   assert.equal(data.flags.tor, null);
+});
+
+test("health falls back to existing geo data when Net.Coffee denies the Worker", async (t) => {
+  const urls = [];
+  t.mock.method(globalThis, "fetch", async (url) => {
+    urls.push(url);
+    if (url.startsWith("https://ip.net.coffee/"))
+      return new Response(null, { status: 403 });
+    return Response.json({
+      success: true,
+      ip: "1.1.1.1",
+      country: "United States",
+      country_code: "US",
+      region: "California",
+      city: "Los Angeles",
+      connection: { isp: "Cloudflare", asn: 13335 },
+    });
+  });
+  const response = await worker.fetch(request("?ip=1.1.1.1"), {});
+  const data = await response.json();
+  assert.equal(response.status, 200);
+  assert.deepEqual(urls, [
+    "https://ip.net.coffee/api/ip/lookup/1.1.1.1",
+    "https://ipwho.is/1.1.1.1",
+  ]);
+  assert.equal(data.ip, "1.1.1.1");
+  assert.equal(data.source, "ipwho.is");
+  assert.equal(data.score, null);
+  assert.equal(data.status, "unknown");
+  assert.equal(data.country, "United States");
+  assert.equal(data.isp, "Cloudflare");
+  assert.equal(data.flags.vpn, null);
+});
+
+test("health rejects wrong-IP or failed fallback data and preserves the primary error", async (t) => {
+  let secondary;
+  t.mock.method(globalThis, "fetch", async (url) => {
+    if (url.startsWith("https://ip.net.coffee/"))
+      return new Response("private denial page", { status: 403 });
+    return secondary;
+  });
+  for (const response of [
+    Response.json({ success: true, ip: "8.8.8.8" }),
+    Response.json({ success: false, ip: "1.1.1.1" }),
+    new Response("private fallback page", { status: 500 }),
+  ]) {
+    secondary = response;
+    const result = await worker.fetch(request("?ip=1.1.1.1"), {});
+    assert.equal(result.status, 502);
+    assert.deepEqual(await result.json(), {
+      error: "外部数据源暂不可用 (403)",
+    });
+  }
+});
+
+test("health falls back when the primary response body disconnects", async (t) => {
+  t.mock.method(globalThis, "fetch", async (url) =>
+    url.startsWith("https://ip.net.coffee/")
+      ? new Response(new ReadableStream({
+          start(controller) {
+            controller.error(new TypeError("private connection details"));
+          },
+        }))
+      : Response.json({ success: true, ip: "1.1.1.1" }),
+  );
+  const response = await worker.fetch(request("?ip=1.1.1.1"), {});
+  assert.equal(response.status, 200);
+  const data = await response.json();
+  assert.equal(data.source, "ipwho.is");
+  assert.equal(data.status, "unknown");
+  assert.equal(data.score, null);
 });
 
 test("health score boundaries and unknown values match the UI", async (t) => {
@@ -67,7 +138,7 @@ test("health text handles IPv6 and strips terminal control characters", async (t
   assert.match(response.headers.get("Content-Type"), /text\/plain/);
   const body = await response.text();
   assert.match(body, /score: 90\nstatus: good/);
-  assert.ok(!body.includes("source: Net.Coffee"));
+  assert.ok(body.includes("source: Net.Coffee"));
   assert.ok(!body.includes("\u001b"));
   assert.ok(!body.includes("\nInjected"));
 });
@@ -104,7 +175,11 @@ test("health rejects invalid targets, local caller detection and rate limits bef
 
 test("health reports mismatched, malformed and failed upstream responses", async (t) => {
   let response;
-  t.mock.method(globalThis, "fetch", async () => response);
+  let calls = 0;
+  t.mock.method(globalThis, "fetch", async () => {
+    calls += 1;
+    return response;
+  });
   for (const data of [{ ip: "8.8.8.8" }, {}, null]) {
     response = Response.json(data);
     assert.equal((await worker.fetch(request("?ip=1.1.1.1"), {})).status, 502);
@@ -112,5 +187,6 @@ test("health reports mismatched, malformed and failed upstream responses", async
   response = new Response("private upstream body", { status: 429 });
   const result = await worker.fetch(request("?ip=1.1.1.1"), {});
   assert.equal(result.status, 429);
+  assert.equal(calls, 4);
   assert.ok(!(await result.text()).includes("private upstream body"));
 });

@@ -5,11 +5,12 @@
 ## 每次发布
 
 1. PR 运行项目与 one-ip 回归、部署脚本测试、两套前端构建和 Worker 打包，不使用生产凭据。
-2. 合并/推送到 `main` 后，同一工作流的 deploy job 下载刚验证的静态构建包和 Worker bundle，不在 VPS 安装 Node 或重新构建。先部署 `gmlhub-one-ip` Worker，仅接管 `gmlhub.top/one-ip` 和 `/one-ip/*`；核对真实 API、提交号、模块首页、深层页面及入口脚本字节，通过后才发布桌面。Cloudflare 域名代理须保持开启；不需要在宝塔添加 API 代理。
+2. 合并/推送到 `main` 后，同一工作流的 deploy job 下载刚验证的静态构建包和 Worker bundle，不在 VPS 安装 Node 或重新构建。先读取部署前桌面和 Worker 的公开提交号，在最近 10 个 Worker 版本中按**桌面 SHA** 选择最新匹配的版本，核对版本 ID、tag 及版本内 `RELEASE_SHA`，将恢复目标落盘为 Runner 上的 `worker-recovery.json`；配置、版本查询、校验或快照失败均不部署。再部署 `gmlhub-one-ip` Worker，仅接管 `gmlhub.top/one-ip` 和 `/one-ip/*`；必过检查为提交号 SHA、配置 API、模块首页、深层页面及入口脚本字节，通过后才发布桌面。第三方 IP 健康查询通过显式上游诊断单独检查，不作为发布必过门禁。Cloudflare 域名代理须保持开启；不需要在宝塔添加 API 代理。
 3. 如果 main 已有更新提交，过时的 deploy job 跳过；生产发布使用独立 concurrency group，进行中的发布不被新提交取消。[GitHub concurrency](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency)
 4. SSH 使用专用账号及服务器固定主机密钥，构建包经 stdin 传给 forced command。服务器验证命令、包 SHA-256、gzip 完整性、文件清单及校验和，拒绝穿越、链接、重复条目和超量内容。
 5. 完整版本存放到 `releases/<commit>/public`，再原子切换 `current`。源站逐个读取版本文件、首页、Service Worker 和静态资源，验证返回字节；失败或可捕获的终止信号会恢复宝塔原指针。
 6. Runner 再从公网检查 `/version.json` 的 commit 和 one-ip Worker、资源。公网/CDN 检查失败会使 Actions 标红，不能宣称已验收；源站已切换的版本不会仅因 CDN 异常而自动回滚。
+7. 最后一次双端一致性检查通过后，单独运行 `python3 scripts/check_one_ip_release.py "$GITHUB_SHA" dist --upstream` 诊断第三方 IP 声誉服务。失败时输出 Actions warning 并使该诊断步骤以非零状态退出；该步骤设有 `continue-on-error: true`，不阻塞已完成的桌面发布，也不触发 Worker 回退。降级数据（如 `source=ipwho.is`、`status=unknown`）不能冒充 IP 声誉服务正常。
 
 同一个 commit 的相同构建包可安全重试；同一个 commit 的不同内容会被拒绝。打包器固定归档元数据，避免单纯重试产生不同包。版本清单中的 SHA 来自 GitHub 的实际提交；本地未提交演练使用基线 SHA，仅作为测试标签，不代表该提交已含工作区改动。
 
@@ -62,7 +63,11 @@ Cloudflare Token 在 [API Tokens](https://dash.cloudflare.com/profile/api-tokens
 - 分支固定选 `main`，`operation=deploy`：重跑 main 的测试、构建和发布。
 - `operation=rollback`：`release_sha` 填已在两端成功发布的完整 40 位 SHA；在最近 10 个 Worker 版本中按 SHA tag 选择最新匹配的版本 ID（同 SHA 重试可能产生多个版本），恢复代码与资源并核对线上提交号，再验证宝塔已安装文件、切换并检查源站及公网。没有对应版本时会停止，不继续切换桌面；更旧版本须由管理员核对 Cloudflare 保留的版本 ID 后操作。
 
-Worker 与宝塔不构成跨平台原子事务。Worker 发布或公网验证失败可能已改变边缘版本，但会阻止后续桌面发布；宝塔失败时 Worker 也不会自动恢复。此时 Actions 标红，选择重试当前 `deploy`，或对两端都有的已知成功 SHA 执行 `rollback`。首次发布之前的旧静态版本及全 `0` legacy 快照没有 Worker tag，不能用于完整双端回滚；如需仅恢复旧桌面，管理员可使用原有受限 SSH `rollback <SHA>`，并另外处理 Cloudflare 路由。Worker 回滚不恢复路由、限流配置或独立管理的 Secrets，详见 [Cloudflare 回滚边界](https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/)。
+自动发布的 Worker 部署或紧随其后的必过检查（SHA、配置、资源字节）失败时，`scripts/deploy_worker_release.py` 会尝试将快照中的旧 Worker 版本部署到 100% 流量，再核对当前版本 ID、流量比例、公网 Worker 提交号与未变更的桌面提交号。恢复验证通过后，Actions **仍然失败**，后续桌面发布不执行；恢复命令失败或验证不符时明确报告 `Worker recovery FAILED; consistency is NOT verified`，不能视为两端一致。如果恢复前发现桌面已变更，则拒绝自动恢复，避免盲目回退已推进的发布。上游独立诊断失败不会触发此自动恢复；旧 Worker 的外部查询服务也可能仍不可用，恢复验证不能证明上游健康已修复。
+
+恢复目标优先与部署前桌面对齐，而非照搬部署前已不一致的 Worker。例如桌面为 `0fe2516…`、Worker 为 `716f1d0…` 时，选择完整桌面 SHA 对应的 Worker；快照及日志记录已有不一致和选择依据。若对应 Worker 已不在最近 10 个可部署版本中，或 tag、`RELEASE_SHA` 无法验证，自动发布停止，需要管理员先核对恢复目标。首次接入没有历史 Worker tag 的站点（包括全 `0` legacy 快照）同样不能通过此门禁，须由管理员安排有明确恢复方案的首次部署。
+
+Worker 与宝塔不构成跨平台原子事务。本轮自动恢复仅覆盖 **Worker 部署及紧随必过检查**，不覆盖后续 SSH 发布、源站或 CDN 验证、最终双端复查，也不改变手动 `operation=rollback` 的既有行为。桌面已成功切换而公网检查失败时，不自动回退 Worker；宝塔自身恢复旧指针时，Worker 也不会自动恢复。此时 Actions 标红，核对两端当前 SHA 后重试 `deploy`，或对两端都有的已知成功 SHA 执行 `rollback`。Runner 被终止、SIGKILL、失联或外部人工并发发布不能保证自动恢复；快照位于当前 Runner 工作目录，不是跨 Runner 的持久恢复记录。如需仅恢复旧桌面，管理员可使用原有受限 SSH `rollback <SHA>`，并另外处理 Cloudflare 路由。Worker 回滚不恢复路由、限流配置或独立管理的 Secrets，详见 [Cloudflare 回滚边界](https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/)。
 
 若尚未发布到 Actions，不能把本地检查描述为真实 CI/CD 通过。
 
@@ -77,7 +82,7 @@ pnpm run worker:check
 bash -n scripts/deploy.sh
 ```
 
-部署回归会在临时目录和本机隔离 HTTP 服务演练版本切换/回滚，以及 API 类型、版本和资源字节错误，不连接 VPS，不读取生产凭据。
+部署回归会在临时目录和本机隔离 HTTP 服务演练版本切换/回滚，以及 API 类型、版本和资源字节错误；Worker 发布使用模拟 pnpm/Wrangler CLI，覆盖恢复目标预检、快照失败、必过检查失败后的恢复及恢复验证失败，不连接 Cloudflare/VPS，不读取生产凭据。
 
 ## 验证边界
 
