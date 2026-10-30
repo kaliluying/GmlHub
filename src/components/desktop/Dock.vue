@@ -1,83 +1,32 @@
 <template>
-  <div class="dock-container fixed left-1/2 z-50">
-    <div
-      ref="dockRef"
-      class="dock dock-surface flex items-end gap-2.5 sm:gap-3 px-3 sm:px-[1.125rem] pt-3 pb-2 sm:pb-2.5 rounded-[1.55rem] sm:rounded-[1.8rem] dock-shadow"
-      :class="{ 'is-overflowing': hasDockOverflow }"
-      :style="dockBoardStyle"
-      @mousemove="handleDockMouseMove"
-      @mouseleave="handleDockMouseLeave"
-      @scroll="handleDockScroll"
-    >
-      <template v-for="({ app, group, startsGroup }, index) in dockEntries" :key="app.id">
-        <div v-if="index > 0 && startsGroup" class="dock-divider" role="separator" aria-orientation="vertical" :aria-label="group" />
-        <div
-          class="dock-item relative group"
-          :ref="el => setIconRef(el, index)"
-          @click="handleAppClick(app.id)"
-          @keydown.enter.prevent="handleAppClick(app.id)"
-          @keydown.space.prevent="handleAppClick(app.id)"
-          role="button"
-          tabindex="0"
-          :aria-label="`打开 ${app.name}`"
-          :title="`${app.name} · ${group}${app.launchMode === 'external' ? ' · 新标签页打开' : ''}`"
-        >
-          <div
-            class="dock-icon rounded-[1.15rem] flex items-center justify-center cursor-pointer border border-white/20"
-            :class="dockIconClass"
-            :style="{ backgroundColor: app.color, ...getIconShellStyle(index) }"
-          >
-            <span class="dock-glyph" :style="getIconStyle(index)">
-              <IconGlyph :name="app.id" :size="store.settings.iconSize === 'large' ? 30 : 24" />
-            </span>
-          </div>
-
-          <div
-            v-if="isAppOpen(app.id)"
-              class="dock-open-indicator"
-          />
-
-          <div class="tooltip dock-tooltip absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1 rounded-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-            {{ app.name }} · {{ group }}{{ app.launchMode === 'external' ? ' · 新标签页打开' : '' }}
-          </div>
-        </div>
-      </template>
-
-      <div class="dock-divider" />
-
-      <div
-        class="dock-item relative group"
-        :ref="el => setIconRef(el, trashIndex)"
-        @click="showTrash"
-        @keydown.enter.prevent="showTrash"
-        @keydown.space.prevent="showTrash"
+  <nav class="dock-container" aria-label="程序坞" :class="{ 'dock-dark': store.settings.surfaceTheme === 'midnight' }" :style="{ '--dock-size': `${iconSize}px` }">
+    <div ref="dockRef" class="dock dock-surface" :class="{ 'is-overflowing': hasDockOverflow }" @mousemove="handleMouseMove" @mouseleave="clearMagnification" @scroll="updateScrollHints">
+      <button
+        v-for="(app, index) in dockApps"
+        :key="app.id"
+        type="button"
         role="button"
-        tabindex="0"
-        aria-label="打开废纸篓"
+        class="dock-item"
+        :style="getItemStyle(index)"
+        :aria-label="`打开 ${app.name}`"
+        @click="store.openWindow(app.id)"
       >
-      <div class="dock-icon dock-trash rounded-[1.15rem] flex items-center justify-center border border-white/20 cursor-pointer" :class="dockIconClass" :style="getIconShellStyle(trashIndex)">
-          <span class="dock-glyph" :style="getIconStyle(trashIndex)">
-            <IconGlyph name="trash" :size="store.settings.iconSize === 'large' ? 30 : 24" />
-          </span>
-        </div>
-        <div class="tooltip dock-tooltip absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1 rounded-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-          废纸篓
-        </div>
-
-        <div
-          v-if="store.trashCount > 0"
-          class="dock-trash-badge"
-        >
-          {{ store.trashCount }}
-        </div>
-      </div>
-
-      <div class="dock-reflection" aria-hidden="true" />
+        <span class="dock-icon" :class="`dock-icon-${app.id}`" :style="{ '--app-color': app.color }">
+          <IconGlyph :name="app.id" :size="iconSize * 0.64" />
+        </span>
+        <span v-if="isAppOpen(app.id)" class="dock-open-indicator" aria-hidden="true" />
+        <span class="dock-tooltip" role="tooltip">{{ app.name }}</span>
+      </button>
+      <div class="dock-divider" aria-hidden="true" />
+      <button type="button" role="button" class="dock-item" :style="getItemStyle(dockApps.length)" aria-label="打开废纸篓" @click="store.openTrashWindow()">
+        <span class="dock-icon dock-trash"><IconGlyph name="trash" :size="iconSize * 0.64" /></span>
+        <span v-if="store.trashCount > 0" class="dock-trash-badge">{{ store.trashCount }}</span>
+        <span class="dock-tooltip" role="tooltip">废纸篓</span>
+      </button>
     </div>
-
-    <div v-show="canScrollLeft" class="dock-scroll-fade dock-scroll-fade-left" aria-hidden="true" />
-    <div v-show="canScrollRight" class="dock-scroll-fade dock-scroll-fade-right" aria-hidden="true" />
-  </div>
+    <span v-show="canScrollLeft" class="dock-scroll-fade dock-scroll-fade-left" aria-hidden="true" />
+    <span v-show="canScrollRight" class="dock-scroll-fade dock-scroll-fade-right" aria-hidden="true" />
+  </nav>
 </template>
 
 <script setup>
@@ -87,572 +36,175 @@ import IconGlyph from './IconGlyph.vue'
 
 const store = useDesktopStore()
 const dockRef = ref(null)
-const mouseX = ref(null)
-const iconRefs = ref([])
+const pointerX = ref(null)
 const canScrollLeft = ref(false)
 const canScrollRight = ref(false)
 const hasDockOverflow = ref(false)
-const supportsHover = typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches
+const viewportWidth = ref(window.innerWidth)
+const hoverQuery = window.matchMedia('(hover: hover)')
+const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+const canAnimate = ref(hoverQuery.matches && !reducedMotionQuery.matches)
+const dockAppIds = ['settings', 'ip-check', 'terminal', 'tools', 'github']
+const dockApps = computed(() => [...new Set([
+  ...dockAppIds,
+  ...store.windows.map(item => item.appId).filter(id => id !== 'trash'),
+])].map(id => store.desktopApps.find(app => app.id === id)).filter(Boolean))
+const iconSize = computed(() => ({ small: 40, medium: 48, large: 56 })[store.settings.iconSize] || 48)
+const magnification = computed(() => ({ low: 0.28, medium: 0.48, high: 0.65 })[store.settings.dockAnimationLevel] || 0.48)
+// Reference centers stay at rest so magnification never feeds its moving layout back into itself.
+const restWidth = computed(() => (dockApps.value.length + 1) * (iconSize.value + 6) + 13)
+const clearMagnification = () => { pointerX.value = null }
 
-const dockEntries = computed(() => store.desktopAppGroups.flatMap(group => group.apps.map((app, index) => ({
-  app,
-  group: group.label,
-  startsGroup: index === 0,
-}))))
-const trashIndex = computed(() => store.desktopApps.length)
-
-const dockAnimationProfiles = {
-  low: { maxDistance: 120, boardLift: 3.5, shellScale: 0.16, shellLift: 7, iconScale: 0.12, iconLift: 0.9 },
-  medium: { maxDistance: 150, boardLift: 5, shellScale: 0.24, shellLift: 11, iconScale: 0.2, iconLift: 1.5 },
-  high: { maxDistance: 180, boardLift: 7, shellScale: 0.3, shellLift: 14, iconScale: 0.26, iconLift: 2.2 },
+const getItemStyle = (index) => {
+  let scale = 1
+  if (canAnimate.value && !hasDockOverflow.value && pointerX.value !== null && viewportWidth.value > restWidth.value + 190) {
+    const center = -restWidth.value / 2 + iconSize.value / 2 + index * (iconSize.value + 6) + (index === dockApps.value.length ? 19 : 0)
+    const distance = Math.abs(pointerX.value - center)
+    if (distance < 150) scale += (1 + Math.cos(Math.PI * distance / 150)) / 2 * magnification.value
+  }
+  return { width: `${iconSize.value * scale}px`, '--dock-scale': scale }
 }
 
-const dockAnimationProfile = computed(() => {
-  return dockAnimationProfiles[store.settings.dockAnimationLevel] || dockAnimationProfiles.medium
-})
-
-const dockIconClass = computed(() => {
-  if (store.settings.iconSize === 'small') return 'w-9 h-9 sm:w-10 sm:h-10 text-lg sm:text-xl'
-  if (store.settings.iconSize === 'large') return 'w-12 h-12 sm:w-14 sm:h-14 text-2xl sm:text-3xl'
-  return 'w-10 h-10 sm:w-12 sm:h-12 text-xl sm:text-2xl'
-})
-
-const getCenterX = (index) => {
-  const element = iconRefs.value[index]
-  if (!element) return null
-  const rect = element.getBoundingClientRect()
-  return rect.left + rect.width / 2
+const handleMouseMove = (event) => {
+  if (!canAnimate.value) return
+  const rect = dockRef.value.getBoundingClientRect()
+  pointerX.value = event.clientX - (rect.left + rect.width / 2)
 }
+const isAppOpen = appId => store.windows.some(item => item.appId === appId)
 
-const getInfluence = (index) => {
-  if (!supportsHover || hasDockOverflow.value || mouseX.value == null) {
-    return {
-      influence: 0,
-      eased: 0,
-      signedDistance: 0,
-    }
-  }
-
-  const centerX = getCenterX(index)
-  if (centerX == null) {
-    return {
-      influence: 0,
-      eased: 0,
-      signedDistance: 0,
-    }
-  }
-
-  const signedDistance = mouseX.value - centerX
-  const distance = Math.abs(signedDistance)
-  const maxDistance = dockAnimationProfile.value.maxDistance
-  const influence = Math.max(0, 1 - distance / maxDistance)
-  const eased = influence * influence
-
-  return {
-    influence,
-    eased,
-    signedDistance,
-  }
-}
-
-const dockBoardStyle = computed(() => {
-  if (!supportsHover || mouseX.value == null) {
-    return {
-      transform: 'translateY(0)',
-    }
-  }
-
-  const total = store.desktopApps.length + 1
-  let maxInfluence = 0
-
-  for (let index = 0; index < total; index += 1) {
-    const { influence } = getInfluence(index)
-    if (influence > maxInfluence) maxInfluence = influence
-  }
-
-  const lift = maxInfluence * dockAnimationProfile.value.boardLift
-  return {
-    transform: `translateY(${-lift}px)`,
-  }
-})
-
-const setIconRef = (element, index) => {
-  if (!element) return
-  iconRefs.value[index] = element
-}
-
-const handleDockMouseMove = (event) => {
-  if (!supportsHover) return
-  mouseX.value = event.clientX
-}
-
-const handleDockMouseLeave = () => {
-  mouseX.value = null
-}
-
-const updateDockScrollHints = () => {
-  if (typeof window === 'undefined' || !dockRef.value) {
-    hasDockOverflow.value = false
-    canScrollLeft.value = false
-    canScrollRight.value = false
-    return
-  }
-
+const updateScrollHints = () => {
+  if (!dockRef.value) return
   const element = dockRef.value
-  const hasOverflow = element.scrollWidth - element.clientWidth > 2
-  hasDockOverflow.value = hasOverflow
-  if (!hasOverflow) {
-    canScrollLeft.value = false
-    canScrollRight.value = false
-    return
-  }
-
-  canScrollLeft.value = element.scrollLeft > 6
-  canScrollRight.value = element.scrollLeft + element.clientWidth < element.scrollWidth - 6
+  hasDockOverflow.value = element.scrollWidth - element.clientWidth > 2
+  canScrollLeft.value = hasDockOverflow.value && element.scrollLeft > 6
+  canScrollRight.value = hasDockOverflow.value && element.scrollLeft + element.clientWidth < element.scrollWidth - 6
 }
-
-const syncDockScrollHints = () => {
-  if (typeof window === 'undefined') return
-  window.requestAnimationFrame(updateDockScrollHints)
+const handleResize = () => {
+  viewportWidth.value = window.innerWidth
+  clearMagnification()
+  nextTick(updateScrollHints)
 }
-
-const handleDockScroll = () => {
-  updateDockScrollHints()
+const updateMotionPreference = () => {
+  canAnimate.value = hoverQuery.matches && !reducedMotionQuery.matches
+  clearMagnification()
 }
-
-const getIconShellStyle = (index) => {
-  const { eased } = getInfluence(index)
-  if (eased === 0) {
-    return {
-      transform: 'translateY(0) scale(1)',
-    }
-  }
-
-  const scale = 1 + eased * dockAnimationProfile.value.shellScale
-  const lift = eased * dockAnimationProfile.value.shellLift
-
-  return {
-    transform: `translateY(${-lift}px) scale(${scale})`,
-  }
-}
-
-const getIconStyle = (index) => {
-  const { eased } = getInfluence(index)
-  if (eased === 0) {
-    return {
-      transform: 'translateY(0) scale(1)',
-    }
-  }
-
-  const scale = 1 + eased * dockAnimationProfile.value.iconScale
-  const lift = eased * dockAnimationProfile.value.iconLift
-
-  return {
-    transform: `translateY(${-lift}px) scale(${scale})`,
-  }
-}
-
-const isAppOpen = (appId) => {
-  return store.windows.some(w => w.appId === appId && !w.minimized)
-}
-
-const handleAppClick = (appId) => {
-  const openWindow = store.windows.find(w => w.appId === appId)
-  if (openWindow) {
-    store.bringToFront(openWindow.id)
-  } else {
-    store.openWindow(appId)
-  }
-}
-
-const showTrash = () => {
-  store.openTrashWindow()
-}
-
 onMounted(() => {
-  syncDockScrollHints()
-  if (typeof window === 'undefined') return
-  window.addEventListener('resize', syncDockScrollHints)
+  updateScrollHints()
+  window.addEventListener('resize', handleResize)
+  hoverQuery.addEventListener?.('change', updateMotionPreference)
+  reducedMotionQuery.addEventListener?.('change', updateMotionPreference)
 })
-
 onUnmounted(() => {
-  if (typeof window === 'undefined') return
-  window.removeEventListener('resize', syncDockScrollHints)
+  window.removeEventListener('resize', handleResize)
+  hoverQuery.removeEventListener?.('change', updateMotionPreference)
+  reducedMotionQuery.removeEventListener?.('change', updateMotionPreference)
 })
-
-watch(
-  () => [store.desktopApps.length, store.settings.iconSize],
-  () => {
-    nextTick(syncDockScrollHints)
-  },
-)
+watch(() => [dockApps.value.length, store.settings.iconSize], () => {
+  clearMagnification()
+  nextTick(updateScrollHints)
+})
 </script>
 
 <style scoped>
-.dock-item {
-  position: relative;
-  flex: 0 0 auto;
-}
-
 .dock-container {
-  bottom: max(0.55rem, calc(env(safe-area-inset-bottom) * 0.3 + 0.12rem));
-  width: fit-content;
-  max-width: min(96vw, 1120px);
-  transform: translateX(-50%);
-  overflow: visible;
-}
-
-.dock {
-  position: relative;
-  overflow: visible;
-  scrollbar-width: none;
-  width: fit-content;
-  max-width: 100%;
-  margin: 0 auto;
-  border: 1px solid rgba(255, 255, 255, 0.38);
-  background:
-    linear-gradient(180deg, rgba(248, 251, 255, 0.34) 0%, rgba(231, 239, 255, 0.14) 58%, rgba(215, 227, 245, 0.1) 100%),
-    rgba(228, 236, 249, 0.2);
-  backdrop-filter: saturate(160%) blur(22px);
-  -webkit-backdrop-filter: saturate(160%) blur(22px);
-  transition: transform 180ms cubic-bezier(0.22, 0.8, 0.22, 1);
-}
-
-.dock-surface::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.58) 0%, rgba(255, 255, 255, 0.12) 30%, rgba(255, 255, 255, 0) 56%);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.6) inset,
-    0 -1px 0 rgba(148, 163, 184, 0.22) inset;
-}
-
-.dock-surface::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  background: radial-gradient(125% 100% at 50% 112%, rgba(15, 23, 42, 0.3) 0%, rgba(15, 23, 42, 0) 56%);
-}
-
-.dock::-webkit-scrollbar {
-  display: none;
-}
-
-.dock-icon > span {
-  display: inline-flex;
-  transform-origin: center bottom;
-  transition: transform 150ms cubic-bezier(0.22, 0.8, 0.22, 1);
-  will-change: transform;
-}
-
-.dock-glyph {
-  color: rgba(242, 248, 255, 0.96);
-  filter: drop-shadow(0 3px 5px rgba(2, 8, 18, 0.36));
-}
-
-.dock-item {
-  transition: transform 170ms cubic-bezier(0.22, 0.8, 0.22, 1);
-}
-
-.dock-item:focus-visible {
-  outline: 2px solid rgba(156, 231, 255, 0.94);
-  outline-offset: 4px;
-  border-radius: 1rem;
-}
-
-.dock-icon {
-  position: relative;
-  overflow: hidden;
-  box-shadow:
-    0 8px 20px rgba(15, 23, 42, 0.26),
-    0 1px 0 rgba(255, 255, 255, 0.34) inset;
-  transition: transform 170ms cubic-bezier(0.22, 0.8, 0.22, 1);
-  will-change: transform;
-}
-
-.dock-icon::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0.08) 42%, rgba(255, 255, 255, 0) 72%);
-}
-
-.dock-trash {
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.34) 0%, rgba(203, 213, 225, 0.24) 100%);
-}
-
-.dock-divider {
-  flex: 0 0 1px;
-  width: 1px;
-  height: 2.4rem;
-  margin: 0 0.4rem;
-  border-radius: 999px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(148, 163, 184, 0.4) 100%);
-}
-
-.dock-open-indicator {
-  position: absolute;
+  position: fixed;
+  z-index: 50;
+  bottom: max(8px, env(safe-area-inset-bottom));
   left: 50%;
-  bottom: -0.35rem;
-  width: 0.32rem;
-  height: 0.32rem;
-  border-radius: 999px;
+  max-width: calc(100vw - 20px);
   transform: translateX(-50%);
-  background: rgba(241, 245, 249, 0.92);
-  box-shadow: 0 0 8px rgba(248, 250, 252, 0.75);
+  --dock-glass: rgba(236, 236, 241, 0.35);
+  --dock-label: rgba(245, 245, 247, 0.94);
+  --dock-text: #242426;
 }
-
-.dock-tooltip {
-  z-index: 100;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  background: rgba(15, 23, 42, 0.8);
-  color: rgba(248, 250, 252, 0.96);
-  backdrop-filter: blur(8px);
-}
-
-.dock-trash-badge {
-  position: absolute;
-  top: -0.46rem;
-  right: -0.46rem;
-  min-width: 1rem;
-  height: 1rem;
-  padding: 0 0.25rem;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  background: linear-gradient(180deg, #fb7185 0%, #e11d48 100%);
-  color: #fff;
-  font-size: 10px;
-  line-height: 0.9rem;
-  text-align: center;
-  font-weight: 700;
-  box-shadow: 0 4px 10px rgba(225, 29, 72, 0.38);
-}
-
-.dock-reflection {
-  position: absolute;
-  left: 8%;
-  right: 8%;
-  bottom: -0.42rem;
-  height: 0.78rem;
-  border-radius: 999px;
-  pointer-events: none;
-  background: radial-gradient(50% 100% at 50% 0%, rgba(248, 250, 252, 0.34) 0%, rgba(248, 250, 252, 0) 100%);
-  filter: blur(0.5px);
-}
-
-.dock-scroll-fade {
-  display: none;
-}
-
-.dock.is-overflowing {
-  overflow-x: auto;
-}
-
-@media (min-width: 768px) {
-  .dock-scroll-fade {
-    position: absolute;
-    display: block;
-    pointer-events: none;
-    top: 0;
-    bottom: 0;
-    width: 18px;
-    border-radius: 12px;
-  }
-
-  .dock-scroll-fade-left {
-    left: 0;
-    background: linear-gradient(to right, #e8eef5, transparent);
-  }
-
-  .dock-scroll-fade-right {
-    right: 0;
-    background: linear-gradient(to left, #e8eef5, transparent);
-  }
-}
-
-@media (max-width: 767px) {
-  .dock-container {
-    left: 0;
-    right: 0;
-    transform: none;
-    width: 100%;
-    max-width: none;
-    padding: 0 0.5rem;
-    bottom: max(0.35rem, calc(env(safe-area-inset-bottom) * 0.18 + 0.12rem));
-  }
-
-  .dock {
-    width: 100%;
-    max-width: none;
-    overflow-x: auto;
-    overflow-y: visible;
-    justify-content: flex-start;
-    gap: 0.55rem;
-    padding: 0.8rem 0.65rem calc(0.55rem + env(safe-area-inset-bottom) * 0.2);
-    border-radius: 1.1rem;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .dock-item {
-    min-height: 3.1rem;
-    display: flex;
-    align-items: flex-end;
-  }
-
-  .dock-icon {
-    width: clamp(2.7rem, 10.8vw, 3rem);
-    height: clamp(2.7rem, 10.8vw, 3rem);
-    border-radius: 0.94rem;
-  }
-
-  .dock-icon > span {
-    font-size: clamp(1.18rem, 4.3vw, 1.3rem);
-  }
-
-  .dock-item:active .dock-icon {
-    transform: translateY(-2px) scale(0.97);
-  }
-
-  .dock-item:active .dock-icon > span {
-    transform: translateY(0) scale(0.95);
-  }
-
-  .tooltip {
-    display: none;
-  }
-
-  .dock-reflection {
-    display: none;
-  }
-
-  .dock-scroll-fade {
-    display: block;
-    position: absolute;
-    z-index: 60;
-    pointer-events: none;
-    top: 0.35rem;
-    bottom: max(0.35rem, env(safe-area-inset-bottom) * 0.12);
-    width: 1.1rem;
-    border-radius: 0.75rem;
-  }
-
-  .dock-scroll-fade-left {
-    left: 0.5rem;
-    background: linear-gradient(to right, rgba(8, 12, 22, 0.86), rgba(8, 12, 22, 0));
-  }
-
-  .dock-scroll-fade-right {
-    right: 0.5rem;
-    background: linear-gradient(to left, rgba(8, 12, 22, 0.86), rgba(8, 12, 22, 0));
-  }
-}
-
-@media (hover: none) {
-  .dock-icon > span {
-    transition: transform 120ms ease-out;
-  }
-}
-
-/* Liquid glass dock */
 .dock {
-  border-color: rgba(255, 255, 255, 0.78);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(241, 247, 255, 0.42) 58%, rgba(225, 235, 248, 0.38)),
-    rgba(245, 249, 255, 0.48);
-  box-shadow: 0 26px 60px rgba(79, 99, 132, 0.2), 0 2px 0 rgba(255, 255, 255, 0.86) inset;
-  backdrop-filter: blur(28px) saturate(170%);
-  -webkit-backdrop-filter: blur(28px) saturate(170%);
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  position: relative;
+  width: max-content;
+  max-width: 100%;
+  height: calc(var(--dock-size) + 21px);
+  padding: 8px 9px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 17px;
+  background: var(--dock-glass);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.09);
+  backdrop-filter: blur(28px) saturate(150%);
+  -webkit-backdrop-filter: blur(28px) saturate(150%);
+  scrollbar-width: none;
 }
-
-.dock-surface::before {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.16) 42%, rgba(255, 255, 255, 0) 68%);
-  box-shadow: 0 2px 0 rgba(255, 255, 255, 0.8) inset, 0 -1px 0 rgba(131, 151, 181, 0.12) inset;
+.dock::-webkit-scrollbar { display: none; }
+.dock-item {
+  display: flex;
+  position: relative;
+  align-items: flex-end;
+  justify-content: center;
+  flex: 0 0 auto;
+  height: var(--dock-size);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: default;
+  transition: width 120ms ease-out;
 }
-
-.dock-surface::after {
-  background: radial-gradient(125% 100% at 50% 112%, rgba(97, 123, 163, 0.16) 0%, rgba(97, 123, 163, 0) 56%);
-}
-
 .dock-icon {
-  border-color: rgba(255, 255, 255, 0.7);
-  filter: saturate(0.9);
-  box-shadow: 0 10px 22px rgba(70, 91, 124, 0.2), 0 2px 0 rgba(255, 255, 255, 0.52) inset;
+  display: grid;
+  flex: 0 0 var(--dock-size);
+  width: var(--dock-size);
+  height: var(--dock-size);
+  place-items: center;
+  border-radius: 23%;
+  color: #fff;
+  background: linear-gradient(rgba(255, 255, 255, 0.18), rgba(0, 0, 0, 0.08)), var(--app-color, #8a909b);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.45), inset 0 -1px 1px rgba(0, 0, 0, 0.16), 0 2px 3px rgba(0, 0, 0, 0.22);
+  transform: scale(var(--dock-scale, 1));
+  transform-origin: center bottom;
+  transition: transform 120ms ease-out, filter 120ms;
 }
-
-.dock-icon::before {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.12) 44%, rgba(255, 255, 255, 0) 76%);
-}
-
-.dock-glyph {
-  color: rgba(255, 255, 255, 0.96);
-  filter: drop-shadow(0 2px 4px rgba(30, 48, 78, 0.28));
-}
-
-.dock-trash {
-  border-color: rgba(255, 255, 255, 0.76);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(216, 227, 242, 0.6));
-}
-
-.dock-divider {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(132, 153, 183, 0.28));
-}
-
-.dock-open-indicator {
-  background: #5d7fc2;
-  box-shadow: 0 0 0 0.2rem rgba(93, 127, 194, 0.12);
-}
-
+.dock-icon-settings { background: linear-gradient(#c6c8ce, #858993); color: #f4f4f6; }
+.dock-icon-terminal { background: linear-gradient(#34363b, #121316); box-shadow: inset 0 0 0 2px #9da1a9, 0 2px 3px #0003; }
+.dock-icon-github { background: linear-gradient(#45474d, #18191c); }
+.dock-trash { background: linear-gradient(#ecedf1, #b9bdc6); color: #666d79; }
+.dock-item:active .dock-icon { filter: brightness(0.75); }
+.dock-item:focus-visible { outline: none; }
+.dock-item:focus-visible .dock-icon { outline: 3px solid #007aff; outline-offset: 3px; }
+.dock-divider { flex: 0 0 1px; height: calc(var(--dock-size) - 4px); margin: 2px 6px; background: rgba(60, 60, 67, 0.24); }
+.dock-open-indicator { position: absolute; bottom: -7px; left: calc(50% - 2px); width: 4px; height: 4px; border-radius: 50%; background: var(--dock-text); }
 .dock-tooltip {
-  border-color: rgba(255, 255, 255, 0.76);
-  background: rgba(248, 251, 255, 0.84);
-  color: #26334a;
-  box-shadow: 0 12px 24px rgba(70, 91, 124, 0.16);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  position: absolute;
+  bottom: calc(var(--dock-size) * var(--dock-scale, 1) + 11px);
+  left: 50%;
+  z-index: 1;
+  padding: 4px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 6px;
+  color: var(--dock-text);
+  background: var(--dock-label);
+  box-shadow: 0 3px 9px #0002;
+  font: 12px/1.5 -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  visibility: hidden;
+  pointer-events: none;
 }
-
-.dock-trash-badge {
-  border-color: rgba(255, 255, 255, 0.78);
-  background: linear-gradient(180deg, #e98292, #c85e6d);
-  box-shadow: 0 5px 12px rgba(200, 94, 109, 0.24);
+.dock-item:hover .dock-tooltip,.dock-item:focus-visible .dock-tooltip { visibility: visible; }
+.dock-trash-badge { position: absolute; top: -4px; right: -4px; min-width: 16px; padding: 0 4px; border: 1px solid #fff9; border-radius: 12px; background: #ff453a; color: #fff; font: 10px/15px sans-serif; }
+.dock.is-overflowing { overflow-x: auto; }
+.dock.is-overflowing .dock-tooltip { display: none; }
+.dock-scroll-fade { position: absolute; top: 1px; bottom: 1px; width: 15px; border-radius: 16px; pointer-events: none; }
+.dock-scroll-fade-left { left: 1px; background: linear-gradient(90deg, #a1a1aa, transparent); }
+.dock-scroll-fade-right { right: 1px; background: linear-gradient(-90deg, #a1a1aa, transparent); }
+.dock-dark { --dock-glass: rgba(39, 39, 43, 0.48); --dock-label: rgba(48, 48, 51, 0.96); --dock-text: #f5f5f7; }
+.dock-dark .dock-divider { background: #ffffff38; }
+@media (hover: none) {
+  .dock-tooltip { display: none; }
 }
-
-.dock-reflection {
-  background: radial-gradient(50% 100% at 50% 0%, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0) 100%);
+@media (prefers-reduced-motion: reduce) {
+  .dock-item,.dock-icon { transition: none; }
 }
-
-.dock-item:focus-visible {
-  outline-color: rgba(91, 131, 206, 0.82);
-}
-
-@media (max-width: 767px) {
-  .dock {
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(241, 247, 255, 0.5)),
-      rgba(245, 249, 255, 0.64);
-    border-radius: 1.25rem;
-  }
-
-  .dock-scroll-fade-left {
-    background: linear-gradient(to right, rgba(228, 236, 247, 0.9), rgba(228, 236, 247, 0));
-  }
-
-  .dock-scroll-fade-right {
-    background: linear-gradient(to left, rgba(228, 236, 247, 0.9), rgba(228, 236, 247, 0));
-  }
-}
-
 @media (prefers-reduced-transparency: reduce) {
-  .dock {
-    background: #f8fafc;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
+  .dock { background: #dddde1; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .dock-dark .dock { background: #333336; }
 }
 </style>

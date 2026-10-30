@@ -1,694 +1,412 @@
 <template>
-<div class="settings-panel h-full w-full overflow-auto text-hud-text">
-    <div class="settings-shell">
-      <section class="settings-card lg:col-span-12">
-        <h2 class="text-lg font-semibold">系统信息</h2>
+  <div class="settings-panel" :class="{ 'settings-dark': store.settings.surfaceTheme === 'midnight' }">
+    <aside class="settings-sidebar">
+      <label class="settings-search">
+        <IconGlyph name="search" :size="14" />
+        <input v-model="searchQuery" type="search" placeholder="搜索" aria-label="搜索设置" />
+      </label>
 
-        <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <article class="sys-card" v-for="item in virtualSystemInfo" :key="item.label">
-            <p class="sys-label">{{ item.label }}</p>
-            <p class="sys-value">{{ item.value }}</p>
-          </article>
-        </div>
+      <nav class="settings-nav" aria-label="设置分类">
+        <button
+          v-for="category in filteredCategories"
+          :key="category.id"
+          type="button"
+          class="settings-nav-item"
+          :class="{ active: activeCategory === category.id }"
+          :aria-current="activeCategory === category.id ? 'page' : undefined"
+          :aria-label="category.title"
+          @click="activeCategory = category.id"
+        >
+          <span class="settings-nav-icon" :class="`tone-${category.id}`">
+            <IconGlyph :name="category.icon" :size="16" />
+          </span>
+          <span>{{ category.title }}</span>
+        </button>
+        <p v-if="!filteredCategories.length" class="settings-no-results">没有找到相关设置</p>
+      </nav>
 
-        <div class="mt-4 grid gap-3 sm:grid-cols-3">
-          <article class="sys-meter">
-            <div class="sys-meter-head">
-              <span>CPU 负载</span>
-              <span>{{ usage.cpu }}%</span>
-            </div>
-            <div class="sys-bar"><span :style="{ width: `${usage.cpu}%` }" /></div>
-          </article>
-          <article class="sys-meter">
-            <div class="sys-meter-head">
-              <span>内存占用</span>
-              <span>{{ usage.memory }}%</span>
-            </div>
-            <div class="sys-bar"><span :style="{ width: `${usage.memory}%` }" /></div>
-          </article>
-          <article class="sys-meter">
-            <div class="sys-meter-head">
-              <span>磁盘使用</span>
-              <span>{{ usage.disk }}%</span>
-            </div>
-            <div class="sys-bar"><span :style="{ width: `${usage.disk}%` }" /></div>
-          </article>
-        </div>
-      </section>
+      <button class="settings-reset" type="button" @click="store.resetSettings()">恢复默认设置</button>
+    </aside>
 
-      <section class="settings-card lg:col-span-6">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 class="text-lg font-semibold">外观</h2>
-            <p class="text-xs text-hud-muted">图标尺寸、Dock、动效与信息显示</p>
+    <main class="settings-main">
+      <header class="settings-toolbar">
+        <span>{{ activeCategoryInfo.title }}</span>
+      </header>
+
+      <div class="settings-scroll">
+        <section v-if="activeCategory === 'general'" class="settings-page">
+          <h1>通用</h1>
+          <div class="settings-about-row">
+            <span class="settings-about-icon"><span>G</span></span>
+            <div><strong>GMLHUB</strong><small>个人桌面工作区</small></div>
+            <span class="settings-version">网页桌面</span>
           </div>
-          <button class="settings-btn" @click="store.resetSettings()">恢复默认</button>
-        </div>
 
-        <div class="mt-4 grid gap-3">
-          <button
-            class="toggle-row"
-            :class="{ active: store.settings.showDock }"
-            @click="store.setShowDock(!store.settings.showDock)"
-          >
-            <span class="toggle-label">显示 Dock</span>
-            <span class="toggle-value">{{ store.settings.showDock ? '显示' : '隐藏' }}</span>
-          </button>
-          <button
-            class="toggle-row"
-            :class="{ active: store.settings.showServiceReadout }"
-            @click="store.setShowServiceReadout(!store.settings.showServiceReadout)"
-          >
-            <span class="toggle-label">显示服务摘要</span>
-            <span class="toggle-value">{{ store.settings.showServiceReadout ? '显示' : '隐藏' }}</span>
-          </button>
-        </div>
+          <SettingsGroup title="工作区">
+            <SettingsRow title="信息密度" detail="调整桌面内容的留白">
+              <div class="settings-segment">
+                <button :class="{ selected: store.settings.layoutDensity === 'comfortable' }" :aria-pressed="store.settings.layoutDensity === 'comfortable'" @click="store.setLayoutDensity('comfortable')">舒适</button>
+                <button :class="{ selected: store.settings.layoutDensity === 'compact' }" :aria-pressed="store.settings.layoutDensity === 'compact'" @click="store.setLayoutDensity('compact')">紧凑</button>
+              </div>
+            </SettingsRow>
+            <SettingsRow title="动态效果" detail="控制桌面动画与过渡效果">
+              <div class="settings-segment">
+                <button v-for="item in motionOptions" :key="item.id" :class="{ selected: store.settings.motionLevel === item.id }" :aria-pressed="store.settings.motionLevel === item.id" @click="store.setMotionLevel(item.id)">{{ item.label }}</button>
+              </div>
+            </SettingsRow>
+            <SettingsRow title="背景光影" detail="在桌面壁纸上显示柔和的动态光效">
+              <SettingsSwitch :checked="store.settings.codeRainEnabled" label="背景光影" @change="store.setCodeRainEnabled" />
+            </SettingsRow>
+          </SettingsGroup>
 
-        <div class="mt-5">
-          <p class="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-hud-muted">图标尺寸</p>
-          <div class="hud-segment">
-            <button
-              v-for="size in iconSizeOptions"
-              :key="size.id"
-              class="hud-segment-btn"
-              :class="{ active: store.settings.iconSize === size.id }"
-              @click="store.setIconSize(size.id)"
-            >
-              {{ size.label }}
+          <SettingsGroup title="桌面状态">
+            <SettingsRow title="工作区" detail="当前桌面空间"><span class="settings-value">Personal Space</span></SettingsRow>
+            <SettingsRow title="服务可用率" detail="按最近一次服务巡检计算"><span class="settings-value">{{ availability }}%</span></SettingsRow>
+          </SettingsGroup>
+        </section>
+
+        <section v-else-if="activeCategory === 'appearance'" class="settings-page">
+          <h1>外观</h1>
+          <p class="settings-lead">选择窗口、菜单和程序坞的外观。</p>
+          <div class="settings-appearance-options" role="group" aria-label="外观模式">
+            <button v-for="theme in themeOptions" :key="theme.id" :aria-pressed="store.settings.surfaceTheme === theme.id" :class="{ selected: store.settings.surfaceTheme === theme.id }" @click="store.setSurfaceTheme(theme.id)">
+              <span class="settings-appearance-preview" :class="theme.id"><span /><span><i /><i /><i /></span></span>
+              <span>{{ theme.label }}</span>
             </button>
           </div>
-        </div>
+          <SettingsGroup title="桌面图标">
+            <SettingsRow title="图标大小" detail="调整桌面应用图标的尺寸">
+              <div class="settings-segment">
+                <button v-for="item in iconSizeOptions" :key="item.id" :class="{ selected: store.settings.iconSize === item.id }" :aria-pressed="store.settings.iconSize === item.id" @click="store.setIconSize(item.id)">{{ item.label }}</button>
+              </div>
+            </SettingsRow>
+            <SettingsRow title="服务摘要" detail="在菜单栏显示服务可用情况">
+              <SettingsSwitch :checked="store.settings.showServiceReadout" label="服务摘要" @change="store.setShowServiceReadout" />
+            </SettingsRow>
+          </SettingsGroup>
+        </section>
 
-        <div class="mt-5 grid gap-3 sm:grid-cols-2">
-          <div>
-            <p class="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-hud-muted">动效强度</p>
-            <div class="hud-segment">
-              <button
-                v-for="item in motionOptions"
-                :key="item.id"
-                class="hud-segment-btn"
-                :class="{ active: store.settings.motionLevel === item.id }"
-                @click="store.setMotionLevel(item.id)"
-              >
-                {{ item.label }}
-              </button>
-            </div>
+        <section v-else-if="activeCategory === 'wallpaper'" class="settings-page">
+          <h1>墙纸</h1>
+          <p class="settings-lead">为桌面选择一张墙纸。</p>
+          <div class="wallpaper-grid">
+            <button
+              v-for="item in wallpaperOptions"
+              :key="item.id"
+              class="wallpaper-option"
+              :class="{ selected: store.settings.wallpaper === item.id }"
+              :style="{ backgroundImage: item.preview }"
+              :aria-pressed="store.settings.wallpaper === item.id"
+              @click="store.setWallpaper(item.id)"
+            >
+              <span class="wallpaper-check" aria-hidden="true">✓</span>
+              <span class="wallpaper-name">{{ item.label }}</span>
+            </button>
           </div>
+        </section>
 
-          <div>
-            <p class="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-hud-muted">Dock 动画</p>
-            <div class="hud-segment">
-              <button
-                v-for="item in motionOptions"
-                :key="`dock-${item.id}`"
-                class="hud-segment-btn"
-                :class="{ active: store.settings.dockAnimationLevel === item.id }"
-                @click="store.setDockAnimationLevel(item.id)"
-              >
-                {{ item.label }}
-              </button>
-            </div>
-          </div>
-        </div>
+        <section v-else-if="activeCategory === 'dock'" class="settings-page">
+          <h1>桌面与程序坞</h1>
+          <p class="settings-lead">更改桌面和程序坞在屏幕上的显示方式。</p>
+          <SettingsGroup title="程序坞">
+            <SettingsRow title="显示程序坞" detail="在屏幕底部显示常用应用">
+              <SettingsSwitch :checked="store.settings.showDock" label="显示程序坞" @change="store.setShowDock" />
+            </SettingsRow>
+            <SettingsRow title="大小" detail="同时调整桌面和程序坞图标">
+              <div class="settings-slider">
+                <input type="range" min="0" max="2" step="1" aria-label="程序坞大小" :aria-valuetext="iconSizeOptions.find(item => item.id === store.settings.iconSize)?.label" :value="iconSizeOptions.findIndex(item => item.id === store.settings.iconSize)" @input="store.setIconSize(iconSizeOptions[Number($event.target.value)].id)" />
+                <span><small>小</small><small>大</small></span>
+              </div>
+            </SettingsRow>
+            <SettingsRow title="放大效果" detail="指针移到程序坞时放大图标">
+              <div class="settings-slider">
+                <input type="range" min="0" max="2" step="1" aria-label="程序坞放大效果" :aria-valuetext="motionOptions.find(item => item.id === store.settings.dockAnimationLevel)?.label" :value="motionOptions.findIndex(item => item.id === store.settings.dockAnimationLevel)" @input="store.setDockAnimationLevel(motionOptions[Number($event.target.value)].id)" />
+                <span><small>较小</small><small>较大</small></span>
+              </div>
+            </SettingsRow>
+          </SettingsGroup>
+        </section>
 
-        <div class="mt-3">
-          <button
-            class="toggle-row"
-            :class="{ active: store.settings.codeRainEnabled }"
-            @click="store.setCodeRainEnabled(!store.settings.codeRainEnabled)"
-          >
-            <span class="toggle-label">背景光影</span>
-            <span class="toggle-value">{{ store.settings.codeRainEnabled ? '开启' : '关闭' }}</span>
-          </button>
-        </div>
+        <section v-else-if="activeCategory === 'service'" class="settings-page">
+          <h1>服务状态</h1>
+          <p class="settings-lead">配置自动巡检并查看当前服务状态。</p>
+          <SettingsGroup title="巡检">
+            <SettingsRow title="自动巡检" detail="定期检查已配置服务的可用状态">
+              <SettingsSwitch :checked="store.settings.autoStartMonitoring" label="自动巡检" @change="store.setAutoStartMonitoring" />
+            </SettingsRow>
+            <SettingsRow title="检查间隔" detail="自动巡检的时间间隔">
+              <div class="settings-segment">
+                <button v-for="item in monitorIntervalOptions" :key="item.id" :class="{ selected: store.settings.statusMonitorIntervalMs === item.id }" :aria-pressed="store.settings.statusMonitorIntervalMs === item.id" @click="store.setStatusMonitorInterval(item.id)">{{ item.label }}</button>
+              </div>
+            </SettingsRow>
+            <SettingsRow title="立即检查" detail="手动检查所有已配置服务">
+              <button class="settings-action" :disabled="store.isMonitoringStatus" @click="store.checkServiceStatuses()">{{ store.isMonitoringStatus ? '正在检查…' : '现在检查' }}</button>
+            </SettingsRow>
+          </SettingsGroup>
+          <SettingsGroup title="当前状态">
+            <SettingsRow title="可访问" detail="正常响应的服务"><span class="settings-value">{{ store.serviceSummary.reachable }}</span></SettingsRow>
+            <SettingsRow title="不可达" detail="当前无法访问的服务"><span class="settings-value">{{ store.serviceSummary.unreachable }}</span></SettingsRow>
+            <SettingsRow title="待检查" detail="尚未取得检查结果的服务"><span class="settings-value">{{ store.serviceSummary.unknown }}</span></SettingsRow>
+          </SettingsGroup>
+        </section>
 
-        <div class="mt-5 grid gap-3 sm:grid-cols-2">
-          <div>
-            <p class="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-hud-muted">工作区主题</p>
-            <div class="hud-segment">
-              <button class="hud-segment-btn" :class="{ active: store.settings.surfaceTheme === 'studio' }" @click="store.setSurfaceTheme('studio')">工作室</button>
-              <button class="hud-segment-btn" :class="{ active: store.settings.surfaceTheme === 'midnight' }" @click="store.setSurfaceTheme('midnight')">午夜</button>
-            </div>
-          </div>
-          <div>
-            <p class="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-hud-muted">信息密度</p>
-            <div class="hud-segment">
-              <button class="hud-segment-btn" :class="{ active: store.settings.layoutDensity === 'comfortable' }" @click="store.setLayoutDensity('comfortable')">舒适</button>
-              <button class="hud-segment-btn" :class="{ active: store.settings.layoutDensity === 'compact' }" @click="store.setLayoutDensity('compact')">紧凑</button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="settings-card lg:col-span-6">
-        <h2 class="text-lg font-semibold">动态背景</h2>
-        <p class="mt-1 text-xs text-hud-muted">选择一组柔和的桌面色彩</p>
-        <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <button
-            v-for="item in wallpaperOptions"
-            :key="item.id"
-            class="wallpaper-chip"
-            :class="{ active: store.settings.wallpaper === item.id }"
-            :style="{ backgroundImage: item.preview }"
-            @click="store.setWallpaper(item.id)"
-          >
-            <span>{{ item.label }}</span>
-          </button>
-        </div>
-      </section>
-
-      <section class="settings-card lg:col-span-12">
-        <h2 class="text-lg font-semibold">服务状态</h2>
-        <p class="mt-1 text-xs text-hud-muted">检测策略与状态统计</p>
-        <div class="mt-4 grid gap-3 sm:grid-cols-2">
-          <button
-            class="toggle-row"
-            :class="{ active: store.settings.autoStartMonitoring }"
-            @click="store.setAutoStartMonitoring(!store.settings.autoStartMonitoring)"
-          >
-            <span class="toggle-label">自动巡检</span>
-            <span class="toggle-value">{{ store.settings.autoStartMonitoring ? '启用' : '停用' }}</span>
-          </button>
-
-          <div>
-          <p class="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-hud-muted">检测间隔</p>
-          <div class="hud-segment">
-              <button
-                v-for="item in monitorIntervalOptions"
-                :key="item.id"
-                class="hud-segment-btn"
-                :class="{ active: store.settings.statusMonitorIntervalMs === item.id }"
-                @click="store.setStatusMonitorInterval(item.id)"
-              >
-                {{ item.label }}
-              </button>
-            </div>
-          </div>
-        </div>
-        <div class="mt-4 flex flex-wrap items-center gap-3">
-          <button class="settings-btn" @click="store.checkServiceStatuses()">
-            {{ store.isMonitoringStatus ? '检测中...' : '立即检测' }}
-          </button>
-          <span class="status-badge status-reachable">可访问 {{ store.serviceSummary.reachable }}</span>
-          <span class="status-badge status-unreachable">不可达 {{ store.serviceSummary.unreachable }}</span>
-          <span class="status-badge status-unknown">待检查 {{ store.serviceSummary.unknown }}</span>
-        </div>
-      </section>
-
-      <section class="settings-card lg:col-span-12">
-        <h2 class="text-lg font-semibold">终端</h2>
-        <p class="mt-1 text-xs text-hud-muted">终端显示与命令行为</p>
-
-        <div class="mt-4 grid gap-3 sm:grid-cols-3">
-          <div class="sm:col-span-1">
-          <p class="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-hud-muted">字体大小</p>
-          <div class="hud-segment">
-              <button
-                v-for="size in terminalFontOptions"
-                :key="`font-${size.id}`"
-                class="hud-segment-btn"
-                :class="{ active: store.settings.terminalFontSize === size.id }"
-                @click="store.setTerminalFontSize(size.id)"
-              >
-                {{ size.label }}
-              </button>
-            </div>
-          </div>
-
-          <div class="sm:col-span-2">
-          <p class="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-hud-muted">历史条数上限</p>
-          <div class="hud-segment">
-              <button
-                v-for="item in historyLimitOptions"
-                :key="`hist-${item.id}`"
-                class="hud-segment-btn"
-                :class="{ active: store.settings.terminalHistoryLimit === item.id }"
-                @click="store.setTerminalHistoryLimit(item.id)"
-              >
-                {{ item.label }}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div class="mt-3">
-          <button
-            class="toggle-row"
-            :class="{ active: store.settings.terminalEasterEggsEnabled }"
-            @click="store.setTerminalEasterEggsEnabled(!store.settings.terminalEasterEggsEnabled)"
-          >
-            <span class="toggle-label">终端彩蛋</span>
-            <span class="toggle-value">{{ store.settings.terminalEasterEggsEnabled ? '启用' : '禁用' }}</span>
-          </button>
-        </div>
-      </section>
-
-    </div>
+        <section v-else class="settings-page">
+          <h1>终端</h1>
+          <p class="settings-lead">自定终端的显示与命令历史。</p>
+          <SettingsGroup title="显示">
+            <SettingsRow title="字体大小" detail="调整终端中的文字大小">
+              <div class="settings-segment">
+                <button v-for="item in terminalFontOptions" :key="item.id" :class="{ selected: store.settings.terminalFontSize === item.id }" :aria-pressed="store.settings.terminalFontSize === item.id" @click="store.setTerminalFontSize(item.id)">{{ item.label }}</button>
+              </div>
+            </SettingsRow>
+            <SettingsRow title="命令历史记录" detail="保留在终端中的历史命令数量">
+              <div class="settings-segment">
+                <button v-for="item in historyLimitOptions" :key="item.id" :class="{ selected: store.settings.terminalHistoryLimit === item.id }" :aria-pressed="store.settings.terminalHistoryLimit === item.id" @click="store.setTerminalHistoryLimit(item.id)">{{ item.label }}</button>
+              </div>
+            </SettingsRow>
+            <SettingsRow title="终端彩蛋" detail="启用终端中的隐藏命令与提示">
+              <SettingsSwitch :checked="store.settings.terminalEasterEggsEnabled" label="终端彩蛋" @change="store.setTerminalEasterEggsEnabled" />
+            </SettingsRow>
+          </SettingsGroup>
+        </section>
+      </div>
+    </main>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, defineComponent, h, ref } from 'vue'
 import { useDesktopStore } from '../../stores/desktop.js'
+import IconGlyph from './IconGlyph.vue'
 
 const store = useDesktopStore()
+const activeCategory = ref('general')
+const searchQuery = ref('')
+
+const categories = [
+  { id: 'general', title: '通用', icon: 'settings', keywords: '信息密度 动态效果 动画 背景光影 工作区 服务可用率' },
+  { id: 'appearance', title: '外观', icon: 'spark', keywords: '浅色 深色 主题 图标大小 服务摘要' },
+  { id: 'wallpaper', title: '墙纸', icon: 'stack', keywords: '壁纸 流光 薄暮 薄荷 暖阳' },
+  { id: 'dock', title: '桌面与程序坞', icon: 'tools', keywords: 'dock 大小 放大效果 显示程序坞' },
+  { id: 'service', title: '服务状态', icon: 'activity', keywords: '巡检 检查间隔 立即检查 自动巡检' },
+  { id: 'terminal', title: '终端', icon: 'terminal', keywords: '字体大小 命令历史记录 彩蛋' },
+]
+const activeCategoryInfo = computed(() => categories.find(item => item.id === activeCategory.value) || categories[0])
+const filteredCategories = computed(() => {
+  const query = searchQuery.value.trim().toLocaleLowerCase()
+  return query ? categories.filter(item => `${item.title} ${item.keywords}`.toLocaleLowerCase().includes(query)) : categories
+})
+const availability = computed(() => {
+  const { total, reachable } = store.serviceSummary
+  return total ? Math.round((reachable / total) * 100) : 0
+})
 
 const iconSizeOptions = [
   { id: 'small', label: '小' },
   { id: 'medium', label: '中' },
   { id: 'large', label: '大' },
 ]
-
+const themeOptions = [
+  { id: 'studio', label: '浅色' },
+  { id: 'midnight', label: '深色' },
+]
 const motionOptions = [
   { id: 'low', label: '低' },
   { id: 'medium', label: '中' },
   { id: 'high', label: '高' },
 ]
-
 const terminalFontOptions = [
   { id: 'small', label: '小' },
   { id: 'medium', label: '中' },
   { id: 'large', label: '大' },
 ]
-
 const historyLimitOptions = [
   { id: 30, label: '30' },
   { id: 100, label: '100' },
   { id: 300, label: '300' },
 ]
-
 const monitorIntervalOptions = [
-  { id: 15000, label: '15s' },
-  { id: 30000, label: '30s' },
-  { id: 45000, label: '45s' },
-  { id: 60000, label: '60s' },
+  { id: 15000, label: '15 秒' },
+  { id: 30000, label: '30 秒' },
+  { id: 45000, label: '45 秒' },
+  { id: 60000, label: '60 秒' },
 ]
-
 const wallpaperOptions = [
-  {
-    id: 'deep-net',
-    label: '晨雾',
-    preview: 'linear-gradient(135deg,#eaf2ff,#c7dcff)',
-  },
-  {
-    id: 'neon-core',
-    label: '薄暮',
-    preview: 'linear-gradient(135deg,#f3e9ff,#d9c8f4)',
-  },
-  {
-    id: 'quantum-green',
-    label: '薄荷',
-    preview: 'linear-gradient(135deg,#e4f8f1,#bde8d7)',
-  },
-  {
-    id: 'signal-amber',
-    label: '暖阳',
-    preview: 'linear-gradient(135deg,#fff1d8,#f5c98d)',
-  },
+  { id: 'deep-net', label: '流光', preview: "url('/wallpapers/gmlhub-aurora-ribbon.png')" },
+  { id: 'neon-core', label: '薄暮', preview: 'linear-gradient(135deg,#d1c0ff,#6f6bc2 52%,#151c42)' },
+  { id: 'quantum-green', label: '薄荷', preview: 'linear-gradient(135deg,#c7f4e3,#65b7a2 52%,#124b54)' },
+  { id: 'signal-amber', label: '暖阳', preview: 'linear-gradient(135deg,#ffe7b1,#f19b60 52%,#6c3d50)' },
 ]
 
-const virtualSystemInfo = computed(() => {
-  const summary = store.serviceSummary
-  const ratio = summary.total > 0 ? Math.round((summary.reachable / summary.total) * 100) : 0
-  const lastChecked = store.lastStatusCheckAt
-    ? new Date(store.lastStatusCheckAt).toLocaleTimeString('zh-CN', { hour12: false })
-    : '--:--:--'
-
-  return [
-    { label: '系统版本', value: 'GMLHub Desktop 2.7' },
-    { label: '运行环境', value: 'GMLHub Workspace' },
-    { label: '工作区', value: 'Personal Space' },
-    { label: '运行时长', value: '7 days 03:12:49' },
-    { label: '网络', value: 'eth0 · 192.168.50.23' },
-    { label: '状态可用率', value: `${ratio}%` },
-    { label: '可访问服务', value: `${summary.reachable} / ${summary.total}` },
-    { label: '不可达服务', value: `${summary.unreachable}` },
-    { label: '待检查服务', value: `${summary.unknown}` },
-    { label: '最后巡检', value: lastChecked },
-  ]
+const SettingsGroup = defineComponent({
+  props: { title: { type: String, required: true } },
+  setup(props, { slots }) {
+    return () => h('section', { class: 'settings-group' }, [
+      h('h2', props.title),
+      h('div', { class: 'settings-group-body' }, slots.default?.()),
+    ])
+  },
 })
 
-const usage = computed(() => {
-  const summary = store.serviceSummary
-  const onlineFactor = summary.total > 0 ? summary.reachable / summary.total : 0.5
+const SettingsRow = defineComponent({
+  props: {
+    title: { type: String, required: true },
+    detail: { type: String, default: '' },
+  },
+  setup(props, { slots }) {
+    return () => h('div', { class: 'settings-row', role: 'group', 'aria-label': props.title }, [
+      h('div', { class: 'settings-row-copy' }, [
+        h('span', { class: 'settings-row-title' }, props.title),
+        props.detail && h('span', { class: 'settings-row-detail' }, props.detail),
+      ]),
+      h('div', { class: 'settings-row-control' }, slots.default?.()),
+    ])
+  },
+})
 
-  return {
-    cpu: Math.min(92, Math.max(18, Math.round(28 + onlineFactor * 34))),
-    memory: Math.min(90, Math.max(25, Math.round(42 + onlineFactor * 26))),
-    disk: 39,
-  }
+const SettingsSwitch = defineComponent({
+  props: {
+    checked: { type: Boolean, required: true },
+    label: { type: String, required: true },
+  },
+  emits: ['change'],
+  setup(props, { emit }) {
+    return () => h('button', {
+      type: 'button',
+      role: 'switch',
+      class: ['settings-switch', { on: props.checked }],
+      'aria-checked': String(props.checked),
+      'aria-label': props.label,
+      onClick: () => emit('change', !props.checked),
+    }, [h('span')])
+  },
 })
 </script>
 
-<style scoped>
-.settings-card {
-  width: 100%;
-  box-sizing: border-box;
-  border-radius: var(--radius-card);
-  border: 1px solid var(--hud-line);
-  background: linear-gradient(
-    162deg,
-    rgba(20, 31, 52, 0.52) 0%,
-    var(--hud-panel-soft) 100%
-  );
-  padding: 16px;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: var(--shadow-card), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
-}
-
-.settings-shell {
-  display: grid;
-  gap: 14px;
-  padding: 14px;
-}
-
-@media (max-width: 767px) {
-  .settings-shell {
-    gap: 10px;
-    padding: 10px;
-  }
-
-  .settings-card {
-    border-radius: 12px;
-    padding: 12px;
-  }
-
-  .settings-card .hud-segment {
-    display: flex;
-    width: 100%;
-    flex-wrap: wrap;
-  }
-
-  .hud-segment-btn {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-
-  .wallpaper-chip {
-    height: 58px;
-  }
-}
-
-@media (min-width: 1024px) {
-  .settings-shell {
-    grid-template-columns: repeat(12, minmax(0, 1fr));
-    gap: 16px;
-    padding: 16px;
-  }
-}
-
-.settings-btn {
-  border-radius: var(--radius-inner);
-  border: 1px solid var(--hud-line-strong);
-  background: rgba(15, 23, 42, 0.4);
-  padding: 8px 13px;
-  font-size: 12px;
-  font-weight: 600;
-  color: rgb(226 232 240);
-  transition: all 0.2s var(--ease-hud);
-}
-
-.settings-btn:hover {
-  border-color: var(--hud-primary-border);
-  background: var(--hud-primary-faint);
-  color: var(--hud-text);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(2, 6, 23, 0.35);
-}
-
-.settings-btn:active {
-  transform: translateY(0);
-  box-shadow: none;
-}
-
-.toggle-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-radius: 12px;
-  border: 1px solid var(--hud-line);
-  background: rgba(15, 23, 42, 0.36);
-  padding: 10px 13px;
-  transition: all 0.2s var(--ease-hud);
-}
-
-.toggle-row:hover {
-  border-color: rgba(125, 211, 252, 0.26);
-  background: rgba(22, 34, 56, 0.46);
-}
-
-.toggle-row.active {
-  border-color: rgba(125, 211, 252, 0.44);
-  background: linear-gradient(180deg, rgba(56, 189, 248, 0.16), rgba(56, 189, 248, 0.08));
-}
-
-.toggle-label {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.toggle-value {
-  font-size: 12px;
-  color: var(--hud-muted);
-}
-
-.wallpaper-chip {
-  position: relative;
-  height: 68px;
-  border-radius: 12px;
-  border: 1px solid var(--hud-line-strong);
-  background-size: cover;
-  background-position: center;
-  display: flex;
-  align-items: flex-end;
-  padding: 8px;
-  text-align: left;
-  color: rgb(241 245 249);
-  font-size: 12px;
-  font-weight: 700;
-  text-shadow: 0 1px 10px rgba(15, 23, 42, 0.7);
-  overflow: hidden;
-  transition: all 0.22s var(--ease-hud);
-}
-
-.wallpaper-chip::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(180deg, rgba(2, 6, 23, 0.1) 0%, rgba(2, 6, 23, 0.5) 100%);
-}
-
-.wallpaper-chip > span {
-  position: relative;
-  z-index: 1;
-}
-
-.wallpaper-chip:hover {
-  border-color: rgba(125, 211, 252, 0.5);
-  transform: translateY(-1px);
-  box-shadow: 0 10px 24px rgba(2, 6, 23, 0.4);
-}
-
-.wallpaper-chip.active {
-  border-color: rgba(125, 211, 252, 0.75);
-  box-shadow:
-    0 0 0 1px rgba(125, 211, 252, 0.4) inset,
-    0 0 22px rgba(56, 189, 248, 0.18);
-  transform: translateY(-1px);
-}
-
-.status-badge {
-  border-radius: 999px;
-  padding: 5px 10px;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.status-reachable {
-  background: rgba(16, 185, 129, 0.2);
-  color: rgb(167 243 208);
-}
-
-.status-unreachable {
-  background: rgba(244, 63, 94, 0.2);
-  color: rgb(254 205 211);
-}
-
-.status-unknown {
-  background: rgba(100, 116, 139, 0.2);
-  color: rgb(226 232 240);
-}
-
-.sys-card {
-  border-radius: 12px;
-  border: 1px solid rgba(125, 211, 252, 0.12);
-  background: rgba(8, 14, 26, 0.5);
-  padding: 10px 12px;
-  transition: all 0.22s var(--ease-hud);
-}
-
-.sys-card:hover {
-  border-color: rgba(125, 211, 252, 0.3);
-  background: rgba(17, 30, 52, 0.6);
-  transform: translateY(-1px);
-}
-
-.sys-label {
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--hud-muted);
-}
-
-.sys-value {
-  margin-top: 6px;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--hud-text);
-}
-
-.sys-meter {
-  border-radius: 12px;
-  border: 1px solid rgba(125, 211, 252, 0.12);
-  background: rgba(8, 14, 26, 0.5);
-  padding: 10px 12px;
-  transition: all 0.22s var(--ease-hud);
-}
-
-.sys-meter:hover {
-  border-color: rgba(125, 211, 252, 0.3);
-  background: rgba(17, 30, 52, 0.6);
-}
-
-.sys-meter-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--hud-text);
-}
-
-.sys-bar {
-  margin-top: 8px;
-  width: 100%;
-  height: 6px;
-  border-radius: 999px;
-  background: rgba(125, 211, 252, 0.14);
-  overflow: hidden;
-}
-
-.sys-bar > span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, rgba(56, 189, 248, 0.9) 0%, rgba(14, 165, 233, 0.95) 100%);
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.45);
-  transition: width 0.6s var(--ease-hud);
-}
-
-/* Liquid glass settings */
+<style>
 .settings-panel {
-  color: #182235;
+  --settings-blue: #087cff;
+  --settings-text: #1d1d1f;
+  --settings-secondary: #68686d;
+  --settings-background: #f5f5f7;
+  --settings-sidebar: rgba(232, 232, 235, 0.96);
+  --settings-card: #fff;
+  --settings-control: #e6e6e9;
+  --settings-selected: #fff;
+  --settings-line: rgba(60, 60, 67, 0.14);
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  color: var(--settings-text);
+  background: var(--settings-background);
+  font: 13px/1.45 -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', sans-serif;
 }
 
-.settings-card {
-  border-color: rgba(255, 255, 255, 0.74);
-  border-radius: 1.35rem;
-  background: rgba(255, 255, 255, 0.48);
-  box-shadow: 0 20px 48px rgba(100, 119, 148, 0.12), 0 2px 0 rgba(255, 255, 255, 0.72) inset;
-  backdrop-filter: blur(22px) saturate(140%);
-  -webkit-backdrop-filter: blur(22px) saturate(140%);
+.settings-sidebar {
+  display: flex;
+  flex: 0 0 218px;
+  flex-direction: column;
+  min-width: 0;
+  padding: 52px 12px 12px;
+  border-right: 1px solid rgba(0, 0, 0, 0.09);
+  background: var(--settings-sidebar);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
 }
 
-.settings-btn,
-.toggle-row,
-.sys-card,
-.sys-meter {
-  border-color: rgba(116, 133, 158, 0.16);
-  background: rgba(255, 255, 255, 0.38);
-  color: #344056;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.58) inset;
+.settings-search { display: flex; flex-shrink: 0; align-items: center; gap: 6px; min-height: 29px; padding: 0 8px; border: 1px solid rgba(60, 60, 67, 0.13); border-radius: 7px; background: rgba(255, 255, 255, 0.68); color: #8b8b90; }
+.settings-search input { width: 100%; min-width: 0; padding: 0; border: 0; outline: 0; background: transparent; color: var(--settings-text); font: inherit; }
+.settings-search input::placeholder { color: #85858a; }
+.settings-nav { display: grid; flex: 1; min-height: 0; overflow-y: auto; align-content: start; gap: 2px; margin-top: 16px; }
+.settings-nav-item { display: flex; align-items: center; gap: 9px; min-height: 36px; padding: 4px 8px; border: 0; border-radius: 7px; background: transparent; color: var(--settings-text); text-align: left; font: inherit; cursor: default; }
+.settings-nav-item:hover { background: rgba(60, 60, 67, 0.07); }
+.settings-nav-item.active { background: var(--settings-blue); color: #fff; }
+.settings-nav-icon { display: grid; width: 23px; height: 23px; flex: 0 0 23px; place-items: center; border-radius: 6px; color: #fff; box-shadow: 0 1px 1px rgba(0, 0, 0, 0.12) inset; }
+.tone-general { background: linear-gradient(145deg, #a8abb2, #6b7079); }
+.tone-appearance { background: linear-gradient(145deg, #f49b63, #db4d7c); }
+.tone-wallpaper { background: linear-gradient(145deg, #4cb6ef, #576bd5); }
+.tone-dock { background: linear-gradient(145deg, #a294f4, #7160d5); }
+.tone-service { background: linear-gradient(145deg, #68ca9b, #28996f); }
+.tone-terminal { background: linear-gradient(145deg, #737a88, #3e434d); }
+.settings-no-results { margin: 8px; color: var(--settings-secondary); font-size: 12px; }
+.settings-reset { flex-shrink: 0; margin: auto 7px 0; padding: 9px 0 0; border: 0; border-top: 1px solid var(--settings-line); background: transparent; color: var(--settings-blue); text-align: left; font: inherit; cursor: default; }
+
+.settings-main { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; }
+.settings-toolbar { display: flex; align-items: center; justify-content: flex-start; padding: 0 26px; height: 52px; flex: 0 0 52px; border-bottom: 1px solid var(--settings-line); background: var(--settings-background); font-size: 13px; font-weight: 600; }
+.settings-scroll { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; }
+.settings-page { max-width: 680px; margin: 0 auto; padding: 24px 26px 34px; }
+.settings-page > h1 { margin: 0 0 5px; font-size: 25px; line-height: 1.2; font-weight: 700; letter-spacing: -0.04em; }
+.settings-lead { margin: 0 0 23px; color: var(--settings-secondary); font-size: 12px; }
+.settings-about-row { display: flex; align-items: center; gap: 12px; margin: 15px 0 25px; padding: 14px 15px; border: 1px solid var(--settings-line); border-radius: 11px; background: var(--settings-card); }
+.settings-about-icon { display: grid; width: 44px; height: 44px; place-items: center; border-radius: 10px; background: linear-gradient(145deg, #202e54, #647eaf); color: #fff; font-size: 23px; font-weight: 700; box-shadow: 0 1px 1px rgba(255, 255, 255, 0.45) inset; }
+.settings-about-row strong,.settings-about-row small { display: block; }
+.settings-about-row strong { font-size: 14px; }
+.settings-about-row small { margin-top: 2px; color: var(--settings-secondary); font-size: 11px; }
+.settings-version { margin-left: auto; color: var(--settings-secondary); font-size: 11px; }
+.settings-group { margin-top: 22px; }
+.settings-group h2 { margin: 0 0 7px 2px; color: var(--settings-secondary); font-size: 12px; font-weight: 500; }
+.settings-group-body { overflow: hidden; border: 1px solid var(--settings-line); border-radius: 10px; background: var(--settings-card); }
+.settings-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 53px; padding: 9px 13px; }
+.settings-row + .settings-row { border-top: 1px solid var(--settings-line); }
+.settings-row-copy { display: grid; gap: 2px; min-width: 0; }
+.settings-row-title { font-size: 12px; font-weight: 500; }
+.settings-row-detail { color: var(--settings-secondary); font-size: 10px; }
+.settings-row-control { display: flex; flex: 0 0 auto; align-items: center; justify-content: flex-end; }
+.settings-value { color: var(--settings-secondary); font-size: 12px; }
+.settings-segment { display: inline-flex; gap: 1px; padding: 2px; border: 1px solid rgba(60, 60, 67, 0.12); border-radius: 7px; background: var(--settings-control); }
+.settings-segment button { min-width: 37px; padding: 4px 7px; border: 0; border-radius: 5px; background: transparent; color: var(--settings-text); font: inherit; font-size: 10px; white-space: nowrap; cursor: default; }
+.settings-segment button.selected { background: var(--settings-selected); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18); color: var(--settings-text); }
+.settings-switch { position: relative; width: 34px; height: 20px; padding: 0; border: 0; border-radius: 11px; background: #d1d1d6; transition: background 160ms ease; cursor: default; }
+.settings-switch.on { background: #34c759; }
+.settings-switch span { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--settings-card); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.24); transition: transform 160ms ease; }
+.settings-switch.on span { transform: translateX(14px); }
+.settings-action { padding: 6px 11px; border: 0; border-radius: 6px; background: var(--settings-control); color: var(--settings-text); font: inherit; font-size: 11px; cursor: default; }
+.settings-action:hover { background: #dedee2; }
+.settings-action:disabled { color: #85858a; cursor: wait; }
+.wallpaper-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; margin-top: 18px; }
+.wallpaper-option { position: relative; min-width: 0; aspect-ratio: 1.45; overflow: hidden; border: 2px solid transparent; border-radius: 10px; background-position: center; background-size: cover; box-shadow: 0 2px 7px rgba(20, 28, 44, 0.16); cursor: default; }
+.wallpaper-option.selected { border-color: var(--settings-blue); box-shadow: 0 0 0 2px rgba(8, 124, 255, 0.17); }
+.wallpaper-name { position: absolute; right: 0; bottom: 0; left: 0; padding: 17px 9px 7px; background: linear-gradient(transparent, rgba(0, 0, 0, 0.55)); color: #fff; text-align: left; font-size: 11px; }
+.wallpaper-check { position: absolute; top: 7px; right: 7px; display: none; width: 19px; height: 19px; border-radius: 50%; background: var(--settings-blue); color: #fff; line-height: 19px; text-align: center; font-size: 12px; }
+.wallpaper-option.selected .wallpaper-check { display: block; }
+
+.settings-panel button:focus-visible, .settings-panel input:focus-visible { outline: 2px solid var(--settings-blue); outline-offset: 2px; }
+@container desktop-window (max-width: 620px) {
+  .settings-panel { flex-direction: column; padding-top: 44px; }
+  .settings-sidebar { flex: 0 0 auto; padding: 8px 10px; border-right: 0; border-bottom: 1px solid var(--settings-line); }
+  .settings-nav { display: flex; flex: 0 0 auto; gap: 4px; margin-top: 8px; overflow-x: auto; }
+  .settings-nav-item { flex: 0 0 auto; min-height: 34px; padding: 4px 7px; gap: 5px; font-size: 11px; }
+  .settings-nav-icon { width: 21px; height: 21px; flex-basis: 21px; }
+  .settings-reset { margin: 8px 4px 0; padding-top: 5px; font-size: 11px; }
+  .settings-toolbar { height: 40px; flex-basis: 40px; padding-inline: 16px; }
+  .settings-page { padding: 16px 14px 24px; }
+  .settings-row { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .settings-row-control { justify-content: flex-start; max-width: 100%; }
+  .settings-segment { max-width: 100%; }
+  .settings-segment button { min-width: 31px; padding-inline: 5px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .settings-switch,.settings-switch span { transition: none; }
 }
 
-.settings-btn:hover,
-.toggle-row:hover,
-.sys-card:hover,
-.sys-meter:hover {
-  border-color: rgba(91, 131, 206, 0.32);
-  background: rgba(255, 255, 255, 0.66);
-  color: #243452;
-  box-shadow: 0 10px 20px rgba(91, 131, 206, 0.1), 0 1px 0 rgba(255, 255, 255, 0.68) inset;
-}
-
-.toggle-row.active {
-  border-color: rgba(91, 131, 206, 0.34);
-  background: linear-gradient(180deg, rgba(220, 232, 255, 0.8), rgba(203, 220, 251, 0.56));
-}
-
-.toggle-value,
-.sys-label {
-  color: #77849a;
-}
-
-.sys-value,
-.sys-meter-head {
-  color: #26334a;
-}
-
-.wallpaper-chip {
-  border-color: rgba(255, 255, 255, 0.74);
-  color: #26334a;
-  text-shadow: none;
-  box-shadow: 0 10px 22px rgba(100, 119, 148, 0.12), 0 1px 0 rgba(255, 255, 255, 0.7) inset;
-}
-
-.wallpaper-chip::before {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.22));
-}
-
-.wallpaper-chip:hover,
-.wallpaper-chip.active {
-  border-color: rgba(91, 131, 206, 0.48);
-  box-shadow: 0 0 0 2px rgba(91, 131, 206, 0.1) inset, 0 12px 24px rgba(91, 131, 206, 0.14);
-}
-
-.status-reachable {
-  background: rgba(75, 177, 139, 0.14);
-  color: #278d6a;
-}
-
-.status-unreachable {
-  background: rgba(200, 94, 109, 0.13);
-  color: #b65060;
-}
-
-.status-unknown {
-  background: rgba(116, 133, 158, 0.14);
-  color: #69768a;
-}
-
-.sys-bar {
-  background: rgba(116, 133, 158, 0.14);
-}
-
-.sys-bar > span {
-  background: linear-gradient(90deg, #8eb8ff, #6389d7);
-  box-shadow: none;
-}
-
-@media (prefers-reduced-transparency: reduce) {
-  .settings-card,
-  .settings-btn,
-  .toggle-row,
-  .sys-card,
-  .sys-meter {
-    background: #f8fafc;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
-}
-
+.settings-appearance-options { display: flex; gap: 22px; margin: 22px 0 28px; }
+.settings-appearance-options button { display: grid; gap: 7px; padding: 0; border: 0; background: transparent; color: var(--settings-text); text-align: center; font: inherit; font-size: 12px; }
+.settings-appearance-preview { display: flex; width: 132px; height: 83px; padding: 12px 13px; overflow: hidden; border: 3px solid transparent; border-radius: 9px; background: linear-gradient(145deg, #a8d6f1, #557cc4); background-clip: padding-box; }
+.settings-appearance-preview > span:first-child { width: 29px; border-radius: 4px 0 0 4px; background: #e9e9edde; }
+.settings-appearance-preview > span:last-child { display: grid; flex: 1; gap: 5px; padding: 12px 6px; border-radius: 0 4px 4px 0; background: #fafafa; }
+.settings-appearance-preview i { border-radius: 2px; background: #e2e2e6; }
+.settings-appearance-preview.midnight > span:first-child { background: #33333bde; }
+.settings-appearance-preview.midnight > span:last-child { background: #232328; }
+.settings-appearance-preview.midnight i { background: #494951; }
+.settings-appearance-options .selected .settings-appearance-preview { border-color: var(--settings-blue); }
+.settings-slider { width: 180px; }
+.settings-slider input { display: block; width: 100%; margin: 0; accent-color: var(--settings-blue); }
+.settings-slider > span { display: flex; justify-content: space-between; margin-top: 4px; color: var(--settings-secondary); }
+.settings-slider small { font-size: 10px; }
+.settings-dark { --settings-text: #eeeef0; --settings-secondary: #ababaf; --settings-line: #ffffff19; --settings-background: #202023; --settings-sidebar: #2b2b2e; --settings-card: #2c2c2f; --settings-control: #3a3a3d; --settings-selected: #626268; }
+.settings-dark .settings-search { background: #ffffff0c; border-color: #ffffff0d; }
+.settings-dark .settings-switch:not(.on) { background: #5b5b60; }
+.settings-dark .settings-switch span { background: #fff; }
+.settings-dark .settings-action:hover { background: #55555b; }
 </style>

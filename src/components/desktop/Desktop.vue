@@ -58,24 +58,29 @@
     <!-- 顶部菜单栏 -->
     <div class="menu-bar fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-3 md:px-5">
       <div class="menu-brand-group">
-        <span class="menu-brandmark" aria-hidden="true"><span>G</span></span>
-        <span class="menu-brand-copy">
-          <span class="menu-title">GMLHUB</span>
-          <span class="menu-subtitle">PERSONAL DESKTOP</span>
-        </span>
+        <button type="button" class="menu-apple" aria-label="打开系统设置" @click="openSystemSettings">G</button>
+        <button type="button" class="menu-title menu-app-name" @click="openSystemSettings">GMLHUB</button>
         <span class="menu-divider hidden md:block" />
-        <div class="menu-nav hidden xl:flex" aria-label="桌面导航">
-          <button type="button" class="menu-nav-item" @click="focusWorkspace">工作区</button>
-          <button type="button" class="menu-nav-item" @click="toggleStatusPanel">服务</button>
-          <button type="button" class="menu-nav-item" @click="openSystemSettings">系统</button>
+        <div class="menu-nav hidden md:flex" aria-label="应用菜单">
+          <button type="button" class="menu-nav-item" @click="openLauncher">文件</button>
+          <button type="button" class="menu-nav-item" @click="openLauncher">编辑</button>
+          <button type="button" class="menu-nav-item" @click="focusWorkspace">显示</button>
+          <button type="button" class="menu-nav-item" @click="openLauncher">前往</button>
+          <button type="button" class="menu-nav-item" @click="toggleStatusPanel">窗口</button>
+          <button type="button" class="menu-nav-item" @click="openSystemSettings">帮助</button>
         </div>
       </div>
+      <button type="button" class="dynamic-island" aria-label="打开应用启动器" @click="openLauncher">
+        <span class="dynamic-island-signal" />
+        <span class="dynamic-island-label">GMLHUB</span>
+      </button>
       <div class="menu-right-group relative">
-        <div class="hidden lg:block">
+        <div v-if="store.settings.showServiceReadout" class="service-menu">
           <button
             ref="statusButtonRef"
             class="status-trigger menu-chip-cluster flex items-center gap-1.5 text-[11px]"
             type="button"
+            aria-label="服务状态"
             :aria-expanded="statusPanelOpen"
             aria-controls="service-status-panel"
             @click.stop="toggleStatusPanel"
@@ -301,128 +306,28 @@
       </div>
     </div>
     
-    <div class="desktop-workspace relative z-20 px-4 pb-32 md:pb-36 md:px-10">
-      <section class="workspace-hero" aria-labelledby="workspace-heading">
-        <div class="workspace-hero-copy">
-          <span class="workspace-eyebrow"><span class="workspace-eyebrow-dot" /> GMLHUB · 今日工作台</span>
-          <h1 id="workspace-heading">今天，轻松开始<span class="hero-accent">。</span></h1>
-          <p>把常用服务和工具放在手边，让每一次打开都感觉自然。</p>
-        </div>
-        <div v-if="store.settings.showServiceReadout" class="workspace-hero-readout" aria-label="服务概览">
-          <span class="readout-label">服务可用</span>
-          <strong>{{ store.serviceSummary.reachable }}<small>/{{ store.serviceSummary.total }}</small></strong>
-          <span class="readout-sub">项服务正常运行</span>
-        </div>
-      </section>
-      <div class="desktop-main-grid">
-        <div class="desktop-main-area">
-          <section v-for="group in store.desktopAppGroups" :key="group.id" class="desktop-app-panel" :aria-labelledby="`app-panel-${group.id}`">
-            <div class="desktop-app-panel-head">
-              <div>
-                <span class="desktop-panel-kicker">{{ group.apps.length }} 个入口 · {{ group.description }}</span>
-                <h2 :id="`app-panel-${group.id}`">{{ group.label }}</h2>
-              </div>
-              <span class="desktop-panel-hint">组内拖动排序</span>
-            </div>
-            <div
-              class="desktop-icons grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 sm:gap-4 md:gap-5 content-start"
-              :class="desktopIconGridClass"
-              @dragover.prevent="handleIconGridDragOver"
-              @drop.prevent="handleIconGridDrop"
-            >
-              <AppIcon
-                v-for="app in group.apps"
-                :key="app.id"
-                :app="app"
-                :icon-size="store.settings.iconSize"
-                :is-dragging="dragState.draggedId === app.id"
-                :is-drop-target="dragState.targetId === app.id"
-                @drag-start-icon="handleIconDragStart"
-                @drag-enter-icon="handleIconDragEnter"
-                @drag-leave-icon="handleIconDragLeave"
-                @drag-over-icon="handleIconDragOver"
-                @drop-icon="handleIconDrop"
-                @drag-end-icon="handleIconDragEnd"
-              />
-            </div>
-          </section>
-
-          <section class="focus-stage" aria-labelledby="focus-stage-heading">
-            <div class="focus-stage-head">
-              <div>
-                <span class="focus-stage-kicker">今日焦点</span>
-                <h2 id="focus-stage-heading">
-                  <span>给自己一点空间</span>
-                  <span>专注当下</span>
-                </h2>
-              </div>
-              <span class="focus-stage-status"><span class="focus-stage-status-dot" /> 安静模式</span>
-            </div>
-            <div class="focus-visual" aria-hidden="true">
-              <div class="focus-glass-orb">
-                <span class="focus-liquid-swell focus-liquid-swell-a" />
-                <span class="focus-liquid-swell focus-liquid-swell-b" />
-                <span class="focus-liquid-sheen" />
-                <span class="focus-liquid-bubble focus-liquid-bubble-a" />
-                <span class="focus-liquid-bubble focus-liquid-bubble-b" />
-                <span class="focus-orb-highlight" />
-                <span class="focus-orb-shade" />
-              </div>
-              <span class="focus-orb-glow focus-orb-glow-a" />
-              <span class="focus-orb-glow focus-orb-glow-b" />
-            </div>
-            <div class="focus-stage-foot">
-              <span>把注意力留给正在进行的事</span>
-              <span class="focus-stage-foot-mark">✦</span>
-            </div>
-          </section>
-        </div>
-
-        <aside class="desktop-side-panel hidden xl:grid gap-3 content-start">
-          <section class="widget-card">
-            <h3 class="widget-title">系统概览</h3>
-            <div class="widget-metric-row">
-              <span>可用率</span>
-              <strong>{{ availabilityRate }}%</strong>
-            </div>
-            <div class="widget-metric-row">
-              <span>可访问</span>
-              <strong class="text-emerald-300">{{ store.serviceSummary.reachable }}</strong>
-            </div>
-            <div class="widget-metric-row">
-              <span>不可达</span>
-              <strong class="text-rose-300">{{ store.serviceSummary.unreachable }}</strong>
-            </div>
-            <div class="widget-sub mt-2">最近检测: {{ lastCheckLabel }}</div>
-          </section>
-
-          <section class="widget-card">
-            <h3 class="widget-title">快捷访问</h3>
-            <button
-              v-for="app in panelQuickApps"
-              :key="`quick-${app.id}`"
-              class="widget-link"
-              @click="openWidgetApp(app.id)"
-            >
-              <span class="widget-link-left">
-                <span class="widget-link-icon"><IconGlyph :name="app.id" :size="15" /></span>
-                <span>{{ app.name }}</span>
-              </span>
-              <span class="widget-link-domain">{{ app.domain }}</span>
-            </button>
-          </section>
-
-          <section class="widget-card">
-            <h3 class="widget-title">桌面状态</h3>
-            <div class="widget-metric-row"><span>色彩主题</span><strong>{{ activePresetLabel }}</strong></div>
-            <div class="widget-metric-row"><span>动效强度</span><strong>{{ motionLevelLabel }}</strong></div>
-            <div class="widget-metric-row"><span>背景光影</span><strong>{{ store.settings.codeRainEnabled ? '开启' : '关闭' }}</strong></div>
-            <div class="widget-sub mt-2">时钟 {{ currentTime }}</div>
-          </section>
-        </aside>
+    <!-- 桌面本体：应用像文件一样落在壁纸上，信息通过菜单栏和窗口承载。 -->
+    <div class="desktop-surface relative z-20" aria-label="GMLHUB 桌面">
+      <div class="desktop-shortcuts" :class="{ 'reserves-dock': store.settings.showDock }" aria-label="应用列表">
+        <AppIcon
+          v-for="app in store.desktopApps"
+          :key="`desktop-app-${app.id}`"
+          class="desktop-shortcut"
+          :app="app"
+          :icon-size="store.settings.iconSize"
+          :is-dragging="dragState.draggedId === app.id"
+          :is-drop-target="dragState.targetId === app.id"
+          @drag-start-icon="handleIconDragStart"
+          @drag-enter-icon="handleIconDragEnter"
+          @drag-leave-icon="handleIconDragLeave"
+          @drag-over-icon="handleIconDragOver"
+          @drop-icon="handleIconDrop"
+          @drag-end-icon="handleIconDragEnd"
+        />
       </div>
+
     </div>
-    
+
     <!-- 窗口层 -->
     <Window
       v-for="window in store.windows"
@@ -486,8 +391,8 @@ let desktopEntranceTimeline = null
 const wallpaperPresets = [
   {
     id: 'deep-net',
-    background: '#040912',
-    wallpaper: 'radial-gradient(circle at 14% 18%, rgba(56, 189, 248, 0.2) 0%, rgba(56, 189, 248, 0) 38%), radial-gradient(circle at 84% 74%, rgba(45, 212, 191, 0.16) 0%, rgba(45, 212, 191, 0) 42%), linear-gradient(132deg, #040912 0%, #09172d 46%, #0e2c44 100%)',
+    background: '#07132d',
+    wallpaper: "url('/wallpapers/gmlhub-aurora-ribbon.png')",
     gridRgb: '56, 189, 248',
     scanRgb: '125, 211, 252',
     glowARgb: '34, 211, 238',
@@ -557,7 +462,7 @@ const bootParticles = [
 ]
 
 const wallpaperLabels = {
-  'deep-net': '晨雾',
+  'deep-net': '流光',
   'neon-core': '薄暮',
   'quantum-green': '薄荷',
   'signal-amber': '暖阳',
@@ -715,7 +620,7 @@ const clearBootSequenceTimers = () => {
 const animateDesktopEntrance = () => {
   desktopEntranceTimeline?.kill()
 
-  const targets = gsap.utils.toArray('.menu-bar, .desktop-workspace, .desktop-side-panel, .dock')
+  const targets = gsap.utils.toArray('.menu-bar, .desktop-surface, .dock')
   if (!targets.length) return
 
   if (prefersReducedMotion.value) {
@@ -729,17 +634,12 @@ const animateDesktopEntrance = () => {
     opacity: 1,
     duration: 0.72,
   })
-  desktopEntranceTimeline.fromTo('.desktop-workspace', { y: 18, opacity: 0, filter: 'blur(6px)' }, {
+  desktopEntranceTimeline.fromTo('.desktop-surface', { y: 10, opacity: 0, filter: 'blur(4px)' }, {
     y: 0,
     opacity: 1,
     filter: 'blur(0px)',
     duration: 0.9,
   }, '-=0.42')
-  desktopEntranceTimeline.fromTo('.desktop-side-panel', { x: 18, opacity: 0 }, {
-    x: 0,
-    opacity: 1,
-    duration: 0.72,
-  }, '-=0.62')
   desktopEntranceTimeline.fromTo('.dock', { y: 26, opacity: 0 }, {
     y: 0,
     opacity: 1,
@@ -1077,7 +977,7 @@ const handleAppearancePanelOutside = (event) => {
 const focusWorkspace = () => {
   closeStatusPanel()
   closeAppearancePanel()
-  const workspace = document.querySelector('.desktop-workspace')
+  const workspace = document.querySelector('.desktop-surface')
   if (!workspace) return
   workspace.scrollTo({
     top: 0,
@@ -4543,6 +4443,337 @@ const selectWallpaper = (presetId) => {
 }
 
 /* End-of-file customization layer */
+.desktop {
+  --desktop-ink: #f4f7ff;
+  --desktop-muted: rgba(222, 226, 244, 0.68);
+  --desktop-line: rgba(255, 255, 255, 0.14);
+  color: var(--desktop-ink);
+  background: #080817;
+}
+
+/* Keep the shell atmospheric; application content belongs in windows. */
+.desktop-wallpaper-layer {
+  display: block !important;
+  background-size: cover !important;
+  background-position: center !important;
+  filter: saturate(1.08);
+}
+
+.desktop::before {
+  z-index: 8;
+  background:
+    radial-gradient(ellipse at 50% 35%, transparent 16%, rgba(5, 5, 18, 0.12) 58%, rgba(3, 3, 12, 0.62) 100%),
+    linear-gradient(90deg, rgba(5, 4, 18, 0.22), transparent 24%, transparent 76%, rgba(5, 4, 18, 0.3));
+}
+
+.desktop::after {
+  z-index: 8;
+  opacity: 0.58;
+  background:
+    radial-gradient(ellipse at 12% 15%, rgba(137, 107, 255, 0.26), transparent 34%),
+    radial-gradient(ellipse at 82% 72%, rgba(62, 175, 255, 0.2), transparent 38%),
+    radial-gradient(ellipse at 52% 104%, rgba(17, 15, 55, 0.46), transparent 46%);
+  filter: blur(26px);
+}
+
+.desktop-surface {
+  position: absolute;
+  inset: 0;
+  min-height: 100%;
+  pointer-events: none;
+}
+
+.desktop-shortcuts {
+  position: absolute;
+  top: clamp(4.8rem, 10vh, 7.2rem);
+  right: clamp(1rem, 3.5vw, 3.5rem);
+  display: grid;
+  gap: 0.9rem;
+  justify-items: center;
+  pointer-events: auto;
+}
+
+.desktop-shortcuts :deep(.app-icon) {
+  width: 5.7rem;
+  padding: 0.55rem;
+  border-radius: 1rem;
+}
+
+.desktop-shortcuts :deep(.app-icon:hover) {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 14px 34px rgba(9, 4, 38, 0.24);
+}
+
+.desktop-shortcuts :deep(.icon-container) {
+  width: 3.65rem;
+  height: 3.65rem;
+  border-color: rgba(255, 255, 255, 0.26);
+  border-radius: 1.05rem;
+  box-shadow: 0 14px 28px rgba(4, 5, 22, 0.32), 0 1px 0 rgba(255, 255, 255, 0.38) inset;
+}
+
+.desktop-shortcuts :deep(.desktop-icon-label) {
+  max-width: 5.4rem;
+  padding: 0.22rem 0.4rem;
+  color: rgba(255, 255, 255, 0.94);
+  background: rgba(9, 8, 28, 0.38);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.16) inset;
+  backdrop-filter: blur(12px) saturate(130%);
+  -webkit-backdrop-filter: blur(12px) saturate(130%);
+  text-shadow: 0 1px 3px rgba(2, 2, 12, 0.82);
+}
+
+.desktop-welcome {
+  position: absolute;
+  right: 0;
+  bottom: clamp(7.2rem, 13vh, 9.5rem);
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  color: rgba(238, 239, 255, 0.52);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  pointer-events: none;
+  text-shadow: 0 1px 12px rgba(4, 3, 22, 0.8);
+}
+
+.desktop-welcome kbd {
+  display: inline-flex;
+  min-width: 1.2rem;
+  justify-content: center;
+  margin: 0 0.15rem;
+  padding: 0.1rem 0.28rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.3rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.62rem;
+}
+
+.desktop-welcome-dot {
+  width: 0.22rem;
+  height: 0.22rem;
+  border-radius: 999px;
+  background: #9a8cff;
+  box-shadow: 0 0 12px rgba(154, 140, 255, 0.9);
+}
+
+.menu-bar {
+  height: 3.2rem;
+  border-bottom-color: rgba(255, 255, 255, 0.12);
+  background: rgba(7, 6, 22, 0.36);
+  box-shadow: 0 12px 30px rgba(4, 3, 18, 0.18), 0 1px 0 rgba(255, 255, 255, 0.08) inset;
+  backdrop-filter: blur(22px) saturate(145%);
+  -webkit-backdrop-filter: blur(22px) saturate(145%);
+}
+
+.menu-apple {
+  width: 1.55rem;
+  height: 1.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  color: #fff;
+  background: linear-gradient(145deg, #b9a8ff, #6553cb);
+  box-shadow: 0 5px 16px rgba(83, 63, 189, 0.35), 0 1px 0 rgba(255, 255, 255, 0.42) inset;
+  font-weight: 800;
+}
+
+.menu-app-name,
+.menu-nav-item,
+.menu-clock,
+.menu-action-btn,
+.menu-shortcut-btn {
+  color: rgba(249, 248, 255, 0.92);
+  text-shadow: 0 1px 3px rgba(2, 1, 14, 0.45);
+}
+
+.menu-app-name {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.menu-nav-item:hover,
+.menu-action-btn:hover,
+.menu-shortcut-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.dynamic-island {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 7.8rem;
+  height: 2rem;
+  justify-content: center;
+  padding: 0 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(8, 7, 22, 0.74);
+  box-shadow: 0 8px 24px rgba(2, 1, 14, 0.28), 0 1px 0 rgba(255, 255, 255, 0.1) inset;
+  backdrop-filter: blur(16px) saturate(130%);
+  -webkit-backdrop-filter: blur(16px) saturate(130%);
+  transition: transform 160ms ease, background 160ms ease;
+}
+
+.dynamic-island:hover {
+  transform: translate(-50%, -50%) scale(1.03);
+  background: rgba(25, 21, 54, 0.84);
+}
+
+.dynamic-island-signal {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 999px;
+  background: #a99bff;
+  box-shadow: 0 0 11px rgba(169, 155, 255, 0.95);
+}
+
+.dynamic-island-label {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+
+.menu-chip-cluster,
+.menu-action-btn,
+.menu-shortcut-btn {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.status-pill {
+  border-color: rgba(255, 255, 255, 0.13);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.status-panel,
+.appearance-panel,
+.launcher-panel {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(12, 10, 31, 0.84);
+  color: rgba(247, 247, 255, 0.94);
+  box-shadow: 0 28px 70px rgba(2, 1, 14, 0.46), 0 1px 0 rgba(255, 255, 255, 0.08) inset;
+  backdrop-filter: blur(26px) saturate(140%);
+  -webkit-backdrop-filter: blur(26px) saturate(140%);
+}
+
+.appearance-panel-head,
+.appearance-option,
+.appearance-setting {
+  color: rgba(245, 244, 255, 0.9);
+}
+
+.appearance-panel-head span:last-child,
+.appearance-setting span:last-child {
+  color: rgba(195, 184, 255, 0.72);
+}
+
+.launcher-overlay {
+  background: rgba(4, 3, 18, 0.68);
+  backdrop-filter: blur(18px) saturate(125%);
+  -webkit-backdrop-filter: blur(18px) saturate(125%);
+}
+
+.desktop.surface-studio .launcher-input {
+  border-top-color: rgba(255, 255, 255, 0.1);
+  background: rgba(5, 4, 18, 0.54);
+  color: rgba(247, 247, 255, 0.94);
+}
+
+.desktop.surface-studio .launcher-input::placeholder {
+  color: rgba(220, 216, 244, 0.54);
+}
+
+.desktop.surface-studio .launcher-item,
+.desktop.surface-studio .launcher-chip {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(247, 247, 255, 0.9);
+}
+
+.desktop.surface-studio .launcher-item:hover,
+.desktop.surface-studio .launcher-item.is-active,
+.desktop.surface-studio .launcher-chip:hover {
+  border-color: rgba(169, 155, 255, 0.42);
+  background: rgba(126, 108, 224, 0.22);
+}
+
+@media (max-width: 767px) {
+  .desktop-shortcuts {
+    top: 4.5rem;
+    right: 0.55rem;
+    gap: 0.35rem;
+  }
+
+  .desktop-shortcuts :deep(.app-icon) {
+    width: 4.75rem;
+    padding: 0.35rem;
+  }
+
+  .desktop-shortcuts :deep(.icon-container) {
+    width: 3rem;
+    height: 3rem;
+  }
+
+  .desktop-welcome {
+    bottom: 7.4rem;
+    font-size: 0.58rem;
+  }
+
+  .dynamic-island {
+    min-width: 6rem;
+    height: 1.8rem;
+  }
+
+  .dynamic-island-label {
+    font-size: 0.5rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .menu-app-name,
+  .menu-nav,
+  .dynamic-island {
+    display: none;
+  }
+
+  .menu-brand-group {
+    gap: 0.45rem;
+  }
+
+  .desktop-welcome {
+    flex-wrap: wrap;
+    max-width: 15rem;
+    margin: 0 auto;
+    text-align: center;
+  }
+}
+
+.desktop :deep(.desktop-icon-label) {
+  color: rgba(255, 255, 255, 0.94);
+}
+
+.desktop .desktop-shortcuts :deep(.icon-container) {
+  border-color: rgba(255, 255, 255, 0.26);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.04) 42%, rgba(2, 2, 14, 0.28)),
+    var(--app-color, #403a72);
+  box-shadow: 0 14px 28px rgba(4, 5, 22, 0.32), 0 1px 0 rgba(255, 255, 255, 0.38) inset;
+}
+
+.desktop.surface-studio .desktop-shortcuts :deep(.desktop-icon-label) {
+  color: rgba(255, 255, 255, 0.94);
+  background: rgba(9, 8, 28, 0.38);
+}
+
 .desktop.surface-studio .desktop-app-panel,
 .desktop.surface-studio .focus-stage,
 .desktop.surface-studio .widget-card {
@@ -4576,6 +4807,132 @@ const selectWallpaper = (presetId) => {
 
 .desktop.surface-midnight .focus-stage::before {
   background: linear-gradient(145deg, rgba(12, 40, 62, 0.98), rgba(5, 16, 29, 0.98));
+}
+
+/* Keep the shell close to a native desktop: quiet chrome, compact shortcuts, no dashboard residue. */
+.menu-bar {
+  height: 2.2rem;
+  padding-inline: 0.85rem;
+}
+
+.menu-apple {
+  width: 1.28rem;
+  height: 1.28rem;
+  font-size: 0.72rem;
+}
+
+.menu-title,
+.menu-nav-item,
+.menu-clock {
+  font-size: 0.65rem;
+}
+
+.dynamic-island {
+  width: 8.6rem;
+  height: 1.55rem;
+}
+
+.menu-right-group {
+  gap: 0.28rem;
+}
+
+.status-trigger {
+  width: 1.9rem;
+  min-width: 1.9rem;
+  justify-content: center;
+  padding-inline: 0.35rem;
+}
+
+.status-trigger .status-pill {
+  display: none;
+}
+
+.status-trigger .status-live-dot {
+  margin: 0;
+}
+
+.menu-action-btn,
+.menu-shortcut-btn {
+  min-width: 1.9rem;
+  height: 1.55rem;
+  padding-inline: 0.35rem;
+  font-size: 0;
+}
+
+.menu-action-btn::before {
+  content: '◐';
+  font-size: 0.86rem;
+}
+
+.menu-shortcut-btn::before {
+  content: '⌘K';
+  font-size: 0.62rem;
+  letter-spacing: -0.04em;
+}
+
+.menu-clock {
+  min-width: 2.4rem;
+  text-align: right;
+}
+
+.desktop-shortcuts {
+  top: 3.25rem;
+  bottom: 1rem;
+  overflow: visible;
+  right: 1rem;
+  left: auto;
+  width: max-content;
+  direction: rtl;
+  grid-auto-flow: column;
+  grid-auto-columns: 5.7rem;
+  grid-template-columns: none;
+  grid-template-rows: repeat(auto-fill, 5.15rem);
+  align-content: start;
+  justify-items: center;
+  gap: 0.35rem;
+}
+
+.desktop-shortcuts.reserves-dock {
+  bottom: calc(100px + env(safe-area-inset-bottom));
+}
+
+.desktop-shortcuts :deep(.app-icon) {
+  direction: ltr;
+  width: 4.8rem;
+  min-height: 5.15rem;
+  padding: 0.38rem 0.3rem;
+  gap: 0.25rem;
+  border-radius: 0.7rem;
+}
+
+.desktop-shortcuts :deep(.icon-container) {
+  width: 3.1rem;
+  height: 3.1rem;
+  border-radius: 0.75rem;
+}
+
+.desktop-shortcuts :deep(.desktop-icon-label) {
+  max-width: 4.4rem;
+  padding: 0.14rem 0.24rem;
+  font-size: 0.62rem;
+}
+
+@media (max-width: 767px) {
+  .desktop-shortcuts {
+    right: 0.5rem;
+    grid-auto-columns: 4.75rem;
+    grid-template-rows: repeat(auto-fill, 4.65rem);
+  }
+
+  .desktop-shortcuts :deep(.app-icon) {
+    width: 4rem;
+    min-height: 4.65rem;
+  }
+
+  .desktop-shortcuts :deep(.icon-container) {
+    width: 2.7rem;
+    height: 2.7rem;
+  }
 }
 
 </style>

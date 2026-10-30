@@ -3,7 +3,7 @@
     v-show="!window.minimized"
     ref="windowRef"
     class="window absolute flex flex-col rounded-2xl overflow-hidden window-shadow transition-shadow"
-    :class="{ 'ring-2 ring-sky-400/40': window.focused, 'window-mobile-panel': isMobilePanel }"
+    :class="{ 'window-focused': window.focused, 'window-mobile-panel': isMobilePanel, 'window-settings': window.appId === 'settings', 'window-dark': store.settings.surfaceTheme === 'midnight' }"
     :style="windowStyle"
     role="dialog"
     :aria-label="window.title"
@@ -15,18 +15,18 @@
       class="title-bar h-11 flex items-center justify-between px-4 glass-strong cursor-default"
       @pointerdown.stop="startDrag"
     >
-      <div class="window-title-group flex items-center gap-3">
-        <span class="window-title-icon"><IconGlyph :name="window.appId" :size="16" /></span>
-        <span class="window-title-copy">
-          <span class="window-title-text">{{ window.title }}</span>
-          <span class="window-title-id">{{ window.appId }}</span>
-        </span>
-      </div>
-      
       <div class="flex items-center gap-2">
         <button
           type="button"
-          class="w-3 h-3 rounded-full bg-yellow-400 hover:bg-yellow-500 transition-colors shadow-sm"
+          class="window-close-control rounded-full bg-red-400 hover:bg-red-500"
+          @pointerdown.stop
+          @click.stop="close"
+          title="关闭"
+          aria-label="关闭窗口"
+        />
+        <button
+          type="button"
+          class="window-minimize-control rounded-full bg-yellow-400 hover:bg-yellow-500"
           @pointerdown.stop
           @click.stop="minimize"
           title="最小化"
@@ -34,21 +34,15 @@
         />
         <button
           type="button"
-          class="w-3 h-3 rounded-full bg-green-400 hover:bg-green-500 transition-colors shadow-sm"
+          class="window-maximize-control rounded-full bg-green-400 hover:bg-green-500"
           @pointerdown.stop
           @click.stop="maximize"
           title="最大化"
           aria-label="最大化窗口"
         />
-        <button
-          type="button"
-          class="w-3 h-3 rounded-full bg-red-400 hover:bg-red-500 transition-colors shadow-sm"
-          @pointerdown.stop
-          @click.stop="close"
-          title="关闭"
-          aria-label="关闭窗口"
-        />
       </div>
+
+      <div class="window-title-group"><span class="window-title-text">{{ window.title }}</span></div>
     </div>
     
     <!-- 窗口内容 -->
@@ -125,7 +119,11 @@ const windowStyle = computed(() => ({
 const activePointerId = ref(null)
 let interactionFrame = null
 
-const handlePointerDown = () => {
+const handlePointerDown = (event) => {
+  if (props.window.appId === 'settings' && event.target.closest('.settings-toolbar')) {
+    startDrag(event)
+    return
+  }
   store.bringToFront(props.window.id)
 }
 
@@ -227,6 +225,7 @@ onMounted(() => {
   if (!windowRef.value) return
 
   window.addEventListener('resize', handleViewportResize)
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
 
   entranceTween = gsap.fromTo(windowRef.value, {
     opacity: 0,
@@ -254,226 +253,57 @@ onUnmounted(() => {
 
 <style scoped>
 .window {
+  container: desktop-window / inline-size;
   min-width: 400px;
   min-height: 300px;
-  border: 1px solid rgba(156, 231, 255, 0.26);
-  border-radius: 1.05rem;
-  background: rgba(3, 10, 20, 0.78);
-  box-shadow:
-    0 32px 80px rgba(1, 7, 18, 0.62),
-    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
-    0 0 36px rgba(92, 212, 255, 0.06);
-  backdrop-filter: blur(18px) saturate(125%);
-  -webkit-backdrop-filter: blur(18px) saturate(125%);
+  border: 1px solid rgba(0, 0, 0, 0.22);
+  border-radius: 11px;
+  color: #242426;
+  background: #f5f5f7;
+  box-shadow: 0 18px 55px #0005, 0 0 0 0.5px #ffffff73 inset;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', sans-serif;
 }
-
-.window:focus-within {
-  box-shadow:
-    0 32px 80px rgba(1, 7, 18, 0.62),
-    0 0 0 1px rgba(156, 231, 255, 0.16) inset,
-    0 0 44px rgba(92, 212, 255, 0.11);
-}
-
+.window-focused { box-shadow: 0 22px 65px #0006, 0 0 0 0.5px #ffffff73 inset; }
 .title-bar {
-  height: 3.15rem;
-  border-bottom: 1px solid rgba(156, 231, 255, 0.14);
-  background:
-    linear-gradient(180deg, rgba(15, 36, 54, 0.92), rgba(5, 15, 27, 0.82)),
-    radial-gradient(circle at 0% 0%, rgba(156, 231, 255, 0.13), transparent 38%);
+  position: relative;
+  flex: 0 0 40px;
+  height: 40px;
+  border-bottom: 1px solid #00000012;
+  background: #eeeef0;
+  touch-action: none;
 }
-
-.window-title-group {
-  min-width: 0;
+.window-title-group { position: absolute; left: 100px; right: 100px; overflow: hidden; text-align: center; pointer-events: none; }
+.window-title-text { color: inherit; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.title-bar > div:first-child { position: relative; z-index: 1; }
+.title-bar button { position: relative; width: 12px; height: 12px; border: 0.5px solid #0002; opacity: 1; }
+.window-close-control { background: #ff5f57; }
+.window-minimize-control { background: #febc2e; }
+.window-maximize-control { background: #28c840; }
+.title-bar button:hover { filter: brightness(0.94); }
+.title-bar button:focus-visible { outline: 2px solid #007aff; outline-offset: 3px; }
+.window-body { min-height: 0; background: #f5f5f7; color: inherit; }
+.window-dark { color: #eeeef0; background: #202023; border-color: #ffffff2b; }
+.window-dark .title-bar { background: #303033; border-color: #ffffff12; }
+.window-dark .window-body { background: #202023; }
+.window-settings > .title-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  width: 218px;
+  height: 46px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
 }
-
-.window-title-icon {
-  display: grid;
-  width: 1.8rem;
-  height: 1.8rem;
-  flex: 0 0 auto;
-  place-items: center;
-  border: 1px solid rgba(156, 231, 255, 0.24);
-  border-radius: 0.58rem;
-  color: #bdefff;
-  background: rgba(156, 231, 255, 0.1);
-  box-shadow: 0 0 14px rgba(92, 212, 255, 0.09) inset;
-}
-
-.window-title-copy {
-  display: grid;
-  min-width: 0;
-  gap: 0.05rem;
-}
-
-.window-title-text {
-  overflow: hidden;
-  color: rgba(242, 247, 255, 0.96);
-  font-size: 0.82rem;
-  font-weight: 650;
-  letter-spacing: 0.02em;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.window-title-id {
-  overflow: hidden;
-  color: rgba(142, 164, 190, 0.7);
-  font-family: 'Cascadia Code', 'SFMono-Regular', Consolas, monospace;
-  font-size: 0.5rem;
-  letter-spacing: 0.1em;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.title-bar button {
-  width: 0.72rem;
-  height: 0.72rem;
-  opacity: 0.78;
-  transition: transform 160ms ease, opacity 160ms ease, filter 160ms ease;
-}
-
-.title-bar button:hover {
-  opacity: 1;
-  transform: scale(1.18);
-  filter: brightness(1.15);
-}
-
-.title-bar button:focus-visible {
-  outline: 2px solid rgba(156, 231, 255, 0.92);
-  outline-offset: 3px;
-}
-
-.window-body {
-  background:
-    radial-gradient(circle at 80% 0%, rgba(92, 212, 255, 0.08), transparent 34%),
-    linear-gradient(145deg, rgba(6, 20, 34, 0.88), rgba(1, 7, 16, 0.94));
-}
-
-.window-empty-icon {
-  display: grid;
-  width: 4.8rem;
-  height: 4.8rem;
-  margin: 0 auto 1rem;
-  place-items: center;
-  border: 1px solid rgba(156, 231, 255, 0.22);
-  border-radius: 1.25rem;
-  color: #bdefff;
-  background: rgba(156, 231, 255, 0.08);
-  box-shadow: 0 0 34px rgba(92, 212, 255, 0.12);
-}
-
-.window-mobile-panel {
-  min-width: min(320px, 100%);
-  min-height: 320px;
-}
-
-.resize-handle {
-  background: linear-gradient(135deg, transparent 50%, rgba(148, 163, 184, 0.6) 50%);
-}
-
+.window-settings .window-title-group { display: none; }
+.window-empty-icon { display: grid; width: 64px; height: 64px; margin: 0 auto 16px; place-items: center; color: #6480ab; }
+.resize-handle { background: linear-gradient(135deg, transparent 65%, #8886 65%); }
 @media (max-width: 767px) {
-  .window {
-    min-width: min(320px, 100%);
-    min-height: 320px;
-    border-radius: 0.9rem;
-  }
-
-  .title-bar {
-    height: 2.9rem;
-  }
+  .window { min-width: min(320px, 100%); min-height: 320px; border-radius: 11px; }
 }
-
-/* Liquid glass window chrome */
-.window {
-  min-width: 400px;
-  min-height: 300px;
-  border: 1px solid rgba(255, 255, 255, 0.78);
-  border-radius: 1.35rem;
-  background: rgba(248, 251, 255, 0.72);
-  color: #182235;
-  box-shadow: 0 30px 78px rgba(73, 91, 121, 0.22), 0 2px 0 rgba(255, 255, 255, 0.84) inset;
-  backdrop-filter: blur(30px) saturate(150%);
-  -webkit-backdrop-filter: blur(30px) saturate(150%);
-}
-
-.window:focus-within {
-  box-shadow: 0 30px 78px rgba(73, 91, 121, 0.22), 0 0 0 2px rgba(91, 131, 206, 0.2) inset, 0 2px 0 rgba(255, 255, 255, 0.84) inset;
-}
-
-.title-bar {
-  height: 3.2rem;
-  border-bottom: 1px solid rgba(116, 133, 158, 0.14);
-  background: rgba(255, 255, 255, 0.48);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset;
-  backdrop-filter: blur(24px) saturate(150%);
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
-}
-
-.window-title-icon {
-  width: 1.85rem;
-  height: 1.85rem;
-  border-color: rgba(255, 255, 255, 0.72);
-  border-radius: 0.64rem;
-  color: #557bc2;
-  background: rgba(224, 236, 255, 0.66);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.76) inset;
-}
-
-.window-title-text {
-  color: #182235;
-  font-family: inherit;
-  letter-spacing: -0.01em;
-}
-
-.window-title-id {
-  color: #8b98aa;
-  font-family: inherit;
-  letter-spacing: 0.03em;
-  text-transform: none;
-}
-
-.title-bar button:focus-visible {
-  outline-color: rgba(91, 131, 206, 0.82);
-}
-
-.window-body {
-  background:
-    radial-gradient(circle at 82% 0%, rgba(212, 227, 255, 0.42), transparent 34%),
-    linear-gradient(145deg, rgba(248, 251, 255, 0.72), rgba(231, 239, 249, 0.54));
-  color: #182235;
-}
-
-.window-empty-icon {
-  border-color: rgba(255, 255, 255, 0.78);
-  border-radius: 1.35rem;
-  color: #5b83ce;
-  background: rgba(224, 236, 255, 0.62);
-  box-shadow: 0 20px 36px rgba(91, 131, 206, 0.14), 0 1px 0 rgba(255, 255, 255, 0.76) inset;
-}
-
-.resize-handle {
-  background: linear-gradient(135deg, transparent 50%, rgba(119, 139, 169, 0.52) 50%);
-}
-
-@media (max-width: 767px) {
-  .window {
-    min-width: min(320px, 100%);
-    min-height: 320px;
-    border-radius: 1.1rem;
-  }
-
-  .title-bar {
-    height: 2.95rem;
-  }
-}
-
-@media (prefers-reduced-transparency: reduce) {
-  .window,
-  .title-bar {
-    background: #f8fafc;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
+@container desktop-window (max-width: 620px) {
+  .window-settings > .title-bar { width: 100%; height: 44px; }
 }
 </style>
